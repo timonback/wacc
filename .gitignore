@@ -33,6 +33,7 @@ project/plugins/project/
 ## Intermediate documents:
 *.dvi
 *-converted-to.*
+*.synctex.gz
 
 *.pdf
 
