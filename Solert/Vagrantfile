@@ -21,7 +21,8 @@ Vagrant.configure(2) do |config|
         args: "-t image"
 
       d.run "image",
-        args: "-p 9000:9000"
+        # provide stdin -i to prevent constant restarting of play framework
+        args: "-p 9000:9000 -i"
     end
   end
 
