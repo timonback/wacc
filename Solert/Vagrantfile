@@ -11,34 +11,46 @@ Vagrant.configure(2) do |config|
 
   config.vm.synced_folder ".", "/vagrant", disabled: false
 
+  # vm with sbt to build the docker image
   config.vm.define "vm1" do |vm1|
     vm1.vm.network "private_network", ip: "192.168.10.14"
     vm1.vm.network "forwarded_port", guest: 9000, host: 9000
 
+    vm1.vm.provision "shell", inline: <<-SHELL
+      echo "deb https://dl.bintray.com/sbt/debian /" | sudo tee -a /etc/apt/sources.list.d/sbt.list
+      sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 642AC823
+      sudo apt-get update
+      sudo apt-get --yes install sbt -Dcom.sun.net.ssl.checkRevocation=false
+
+	  cd /vagrant/docker/webserver
+	  sudo sbt docker:publishLocal
+    SHELL
+
     # install docker and pull ubuntu image  
     vm1.vm.provision "docker" do |d|
-      d.build_image "/vagrant/docker/hello-scala",
+      d.build_image "/vagrant/docker/webserver",
         args: "-t image"
 
       d.run "image",
-        # provide stdin -i to prevent constant restarting of play framework
-        args: "-p 9000:9000 -i"
+        args: "-p 9000:9000"
     end
   end
 
+  # vm pulls image from docker hub
   config.vm.define "vm2" do |vm2|
     vm2.vm.network "private_network", ip: "192.168.10.15"
-    vm2.vm.network "forwarded_port", guest: 80, host: 9001
+    vm2.vm.network "forwarded_port", guest: 9000, host: 9001
 
     # install docker and pull ubuntu image
     vm2.vm.provision "docker" do |d|
-      d.pull_images "hello-world"
+      d.pull_images "timonback/wacc:latest"
 
-      d.run "hello-world",
-        restart: "false"
+      d.run "timonback/wacc",
+        args: "-p 9000:9000"
     end
   end
 
+  # static web server
   config.vm.define "vm3" do |vm3|
     vm3.vm.network "private_network", ip: "192.168.10.16"
     vm3.vm.network "forwarded_port", guest: 80, host: 8999
