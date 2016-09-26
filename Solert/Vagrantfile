@@ -6,8 +6,8 @@
 # backwards compatibility). Please don't change it unless you know what
 # you're doing.
 Vagrant.configure(2) do |config|
-#  config.vm.box = "ubuntu/xenial64"
-  config.vm.box = "ubuntu/trusty64"
+  config.vm.box = "ubuntu/xenial64"
+#  config.vm.box = "ubuntu/trusty64"
 
   config.vm.synced_folder ".", "/vagrant", disabled: false
 
@@ -36,6 +36,20 @@ Vagrant.configure(2) do |config|
 
       d.run "hello-world",
         restart: "false"
+    end
+  end
+
+  config.vm.define "vm3" do |vm3|
+    vm3.vm.network "private_network", ip: "192.168.10.16"
+    vm3.vm.network "forwarded_port", guest: 80, host: 8999
+
+    # install docker and pull ubuntu image
+    vm3.vm.provision "docker" do |d|
+      d.build_image "/vagrant/docker/nginx",
+        args: "-t image"
+
+      d.run "image",
+        args: "-p 80:80"
     end
   end
   
