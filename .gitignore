@@ -16,6 +16,8 @@ project/plugins/project/
 .scala_dependencies
 .worksheet
 
+.vagrant
+
 
 ## Core latex/pdflatex auxiliary files:
 *.aux
