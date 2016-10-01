@@ -1,11 +1,11 @@
 
-<input id="input3H" type="text" />
-<input id="input24H" type="text" />
-<button onclick="updateCharts(moment().subtract(moment().minutes() % 5, 'm').toDate(), eval($('#input3H').val()), moment().startOf('hour').toDate(), eval($('#input24H').val()));">Update</button>
-<button onclick="liveData();">Livedata</button>
+<input id="location" type="text" placeholder="Location" />
+<button id="liveData">buienradar Livedata</button>
 
-<canvas id="chart3H" width="400" height="400"></canvas>
-<canvas id="chart24H" width="400" height="400"></canvas>
+<h2>3 hour forecast</h2>
+<canvas id="chart3H" width="400" height="200"></canvas>
+<h2>24 hour forecast</h2>
+<canvas id="chart24H" width="400" height="200"></canvas>
 
 <script src="@routes.Assets.versioned("javascripts/moment.min.js")" type="text/javascript"></script>
 <script src="@routes.Assets.versioned("javascripts/chart.bundle.min.js")" type="text/javascript"></script>
@@ -82,7 +82,7 @@
                 updateChart(chart24H, timestamps, values);
             });
         }
-
+        $("#liveData").click(liveData);
 
         var webSocket = $.simpleWebSocket({url: " ws://" + window.location.host + "/ws/weather"});
         // reconnected listening
@@ -92,13 +92,12 @@
             updateCharts(data.time3H, data.values3H, data.time24H, data.values24H)
         });
         function requestWSUpdate() {
-            webSocket.send(JSON.stringify({location:"Demo"})).done(function () {
+            webSocket.send(JSON.stringify({location: $("#location").val()})).done(function () {
                 console.log(" Update requested");
             }).fail(function (e) {
                 console.log(" Could not send message, " + e);
             });
-
-            window.setInterval(requestWSUpdate, 5000);
+            window.setTimeout(requestWSUpdate, 10000);
         }
         requestWSUpdate();
     })
