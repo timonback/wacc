@@ -17,7 +17,7 @@ project/plugins/project/
 .worksheet
 
 .vagrant
-
+docker-join-tokens
 
 ## Core latex/pdflatex auxiliary files:
 *.aux
