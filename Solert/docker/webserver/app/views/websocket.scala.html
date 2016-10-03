@@ -8,9 +8,9 @@
                 // reconnected listening
                 webSocket.listen(function (message) {
                     console.log(" Received " + message);
-                    var prettyJson = JSON.stringify(JSON.parse(message), null, 2);
+                    var prettyJson = JSON.stringify(message, null, 2);
                     // Update textarea
-                    $("#response").val(prettyJson + "\r\n" + $("#response").val())
+                    $("#response").val(prettyJson + "\r\n-------\r\n" + $("#response").val())
                 });
                 function sendMessage(msg) {
                     webSocket.send(msg).done(function () {
@@ -24,6 +24,8 @@
                     sendMessage($("#message").val());
                     $("#message").val("");
                 })
+                
+                $("#message-form").submit();
             })
     </script>
 }
