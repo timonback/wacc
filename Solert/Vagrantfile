@@ -9,73 +9,74 @@ Vagrant.configure(2) do |config|
   config.vm.box = "ubuntu/xenial64"
 #  config.vm.box = "ubuntu/trusty64"
 
-  config.vm.hostname = "localhost"
   config.vm.synced_folder ".", "/vagrant", disabled: false
 
-  # vm with sbt to build the docker image
-  config.vm.define "vm1" do |vm1|
-    vm1.vm.network "private_network", ip: "192.168.10.14"
-    vm1.vm.network "forwarded_port", guest: 9000, host: 9000
-
-    vm1.vm.provision "shell", inline: <<-SHELL
-#      sudo add-apt-repository ppa:openjdk-r/ppa
-#      sudo apt-get update
-      sudo apt-get install openjdk-8-jdk-headless
-#      sudo update-alternatives --config java
-      sudo apt-get --yes install openjdk-8-jre-headless
-      echo "deb https://dl.bintray.com/sbt/debian /" | sudo tee -a /etc/apt/sources.list.d/sbt.list
-      sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 642AC823
-      sudo apt-get update
-      sudo apt-get --yes install sbt
-
-	  cd /vagrant/docker/webserver
-	  sbt docker:publishLocal
+  require 'ipaddr'
+  
+  $leader_ip = "192.168.10.10"
+  $num_managers = 3
+  $manager_start_ip = "192.168.10.11"
+  $num_workers = 1
+  $worker_start_ip = "192.168.10.100"
+  # $replicas = 5 ##currently using --global as replication mode
+  
+  config.vm.define leader_name = "manager-01" do |leader|
+    leader.vm.hostname = leader_name
+    leader.vm.network "private_network", ip: $leader_ip
+    leader.vm.network "forwarded_port", guest: 9000, host: 9000
+    # vm pulls image from docker hub
+    leader.vm.provision "docker" do |d|
+      d.pull_images "timonback/wacc:webserver"
+    end
+    leader.vm.provision "shell", args: [$leader_ip], inline: <<-SHELL
+      docker swarm init --advertise-addr $1
+      mkdir /vagrant/docker-join-tokens
+      docker swarm join-token worker --quiet > /vagrant/docker-join-tokens/worker
+      docker swarm join-token manager --quiet > /vagrant/docker-join-tokens/manager
+      docker service create --name webserver -p 9000:9000 --mode global timonback/wacc:webserver
     SHELL
-
-    # install docker and pull ubuntu image  
-    vm1.vm.provision "docker" do |d|
-      #d.build_image "/vagrant/docker/webserver",
-      #  args: "-t image"
-      d.run "webserver", image: "timonback/wacc:webserver",
-        args: "-p 9000:9000"
-    end
-  end
-
-  # vm pulls image from docker hub
-  config.vm.define "vm2" do |vm2|
-    vm2.vm.network "private_network", ip: "192.168.10.15"
-    vm2.vm.network "forwarded_port", guest: 9000, host: 9001
-
-    # install docker and pull ubuntu image
-    vm2.vm.provision "docker" do |d|
-      d.pull_images "timonback/wacc:latest"
-
-      d.run "timonback/wacc",
-        args: "-p 9000:9000"
-    end
-  end
-
-  # static web server
-  config.vm.define "vm3" do |vm3|
-    vm3.vm.network "private_network", ip: "192.168.10.16"
-    vm3.vm.network "forwarded_port", guest: 80, host: 8999
-
-    # install docker and pull ubuntu image
-    vm3.vm.provision "docker" do |d|
-      d.build_image "/vagrant/docker/nginx",
-        args: "-t image"
-
-      d.run "image",
-        args: "-p 80:80"
+    leader.vm.provider "virtualbox" do |v|
+      v.memory = 1024
     end
   end
   
-  config.vm.provider "virtualbox" do |v|
-    v.memory = 1536
+  (2..$num_managers).each do |i|
+    config.vm.define manager_name = "manager-%02d" % [i] do |config|
+        config.vm.hostname = manager_name
+
+        # just split out the ip
+
+        ip = IPAddr.new($manager_start_ip)
+        $manager_start_ip = ip.succ.to_s
+        config.vm.network :private_network, ip: $manager_start_ip 
+        config.vm.provision "shell", args: [$leader_ip], inline: <<-SHELL
+          docker swarm join --token $(cat /vagrant/docker-join-tokens/manager) $1
+        SHELL
+    end
+  end
+  
+  (1..$num_workers).each do |i|
+    config.vm.define worker_name = "worker-%02d" % [i] do |config|
+        config.vm.hostname = worker_name
+
+        # just split out the ip
+
+        ip = IPAddr.new($worker_start_ip)
+        $worker_start_ip = ip.succ.to_s
+        config.vm.network :private_network, ip: $worker_start_ip 
+        config.vm.provision "shell", args: [$leader_ip], inline: <<-SHELL
+          docker swarm join --token $(cat /vagrant/docker-join-tokens/worker) $1
+        SHELL
+    end
   end
   
   config.vm.provision "docker" do |d|
   end
+  
+  config.vm.provider "virtualbox" do |v|
+    v.memory = 768
+  end
+  
 
   # install weave
   #config.vm.provision "shell", inline: <<-SHELL
