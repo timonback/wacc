@@ -1,6 +1,10 @@
 
-<input id="location" type="text" placeholder="Location" />
-<button id="liveData">buienradar Livedata</button>
+<form onsubmit="return false;">
+    <input id="location" type="text" placeholder="Location" />
+    <input type="hidden" id="lat" />
+    <input type="hidden" id="lng" />
+    <button type="submit" id="liveData">buienradar Livedata</button>
+</form>
 <p id="error-output" />
 
 <h2>3 hour forecast</h2>
@@ -70,6 +74,8 @@
                 if(data.results.length == 0) {
                   $('#error-output').text("Location not found");
                 } else {
+                    $("#lat").val(data.results[0].geometry.location.lat);
+                    $("#lng").val(data.results[0].geometry.location.lng);
                   liveData(data.results[0].geometry.location.lat, data.results[0].geometry.location.lng);
                 }
             });
@@ -99,12 +105,6 @@
             });
         }
         $("#liveData").click(liveDataLocation);
-        $('#location').keydown(function(event) {
-          if (event.keyCode == 13) {
-            liveDataLocation();
-            return false;
-          }
-        });
 
         var webSocket = $.simpleWebSocket({url: " ws://" + window.location.host + "/ws/weather"});
         // reconnected listening
@@ -114,7 +114,12 @@
             updateCharts(data.time3H, data.values3H, data.time24H, data.values24H)
         });
         function requestWSUpdate() {
-            webSocket.send(JSON.stringify({location: $("#location").val()})).done(function () {
+            var data = {
+                location: $("#location").val(),
+                lat: $("#lat").val(),
+                lng: $("#lng").val(),
+            };
+            webSocket.send(JSON.stringify(data)).done(function () {
                 console.log(" Update requested");
             }).fail(function (e) {
                 console.log(" Could not send message, " + e);
