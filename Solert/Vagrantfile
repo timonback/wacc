@@ -14,7 +14,7 @@ Vagrant.configure(2) do |config|
   require 'ipaddr'
   
   $leader_ip = "192.168.10.10"
-  $num_managers = 3
+  $num_managers = 1
   $manager_start_ip = "192.168.10.11"
   $num_workers = 1
   $worker_start_ip = "192.168.10.100"
@@ -23,32 +23,34 @@ Vagrant.configure(2) do |config|
   config.vm.define leader_name = "manager-01" do |leader|
     leader.vm.hostname = leader_name
     leader.vm.network "private_network", ip: $leader_ip
-    leader.vm.network "forwarded_port", guest: 9000, host: 9000
-    # vm pulls image from docker hub
-    leader.vm.provision "docker" do |d|
-      d.pull_images "timonback/wacc:webserver"
+    leader.vm.network "forwarded_port", guest: 9000, host: 9001
+
+    leader.vm.provider "virtualbox" do |v|
+      v.memory = 1024
     end
+
     leader.vm.provision "shell", args: [$leader_ip], inline: <<-SHELL
       docker swarm init --advertise-addr $1
       mkdir /vagrant/docker-join-tokens
       docker swarm join-token worker --quiet > /vagrant/docker-join-tokens/worker
       docker swarm join-token manager --quiet > /vagrant/docker-join-tokens/manager
+    SHELL
+
+	leader.vm.provision "shell", args: [$leader_ip], inline: <<-SHELL
       docker service create --name webserver -p 9000:9000 --mode global timonback/wacc:webserver
     SHELL
-    leader.vm.provider "virtualbox" do |v|
-      v.memory = 1024
-    end
   end
   
   (2..$num_managers).each do |i|
     config.vm.define manager_name = "manager-%02d" % [i] do |config|
-        config.vm.hostname = manager_name
-
         # just split out the ip
-
         ip = IPAddr.new($manager_start_ip)
         $manager_start_ip = ip.succ.to_s
+
+        config.vm.hostname = manager_name
         config.vm.network :private_network, ip: $manager_start_ip 
+		config.vm.network "forwarded_port", guest: 9000, host: (9000+i)
+
         config.vm.provision "shell", args: [$leader_ip], inline: <<-SHELL
           docker swarm join --token $(cat /vagrant/docker-join-tokens/manager) $1
         SHELL
@@ -57,13 +59,13 @@ Vagrant.configure(2) do |config|
   
   (1..$num_workers).each do |i|
     config.vm.define worker_name = "worker-%02d" % [i] do |config|
-        config.vm.hostname = worker_name
-
         # just split out the ip
-
         ip = IPAddr.new($worker_start_ip)
         $worker_start_ip = ip.succ.to_s
+
+        config.vm.hostname = worker_name
         config.vm.network :private_network, ip: $worker_start_ip 
+
         config.vm.provision "shell", args: [$leader_ip], inline: <<-SHELL
           docker swarm join --token $(cat /vagrant/docker-join-tokens/worker) $1
         SHELL
