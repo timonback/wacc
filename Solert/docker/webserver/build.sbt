@@ -14,10 +14,12 @@ libraryDependencies ++= Seq(
   cache,
   ws,
   "org.scalatestplus.play" %% "scalatestplus-play" % "1.5.1",
-  "datastax" % "spark-cassandra-connector" % "1.6.0-s_2.10"
+  "com.datastax.cassandra" % "cassandra-driver-core" % "2.0.1"
 )
 
 
+
+fork in run := true
 
 fork in run := true
 
