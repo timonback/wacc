@@ -1,7 +1,7 @@
 name := "wacc"
 dockerRepository := Some("timonback")
 
-version := "webserver"
+version := "webserver-cassandra"
 
 lazy val root = (project in file(".")).enablePlugins(PlayScala)
 
@@ -14,7 +14,7 @@ libraryDependencies ++= Seq(
   cache,
   ws,
   "org.scalatestplus.play" %% "scalatestplus-play" % "1.5.1",
-  "com.datastax.cassandra" % "cassandra-driver-core" % "2.0.1"
+  "com.datastax.cassandra" % "cassandra-driver-core" % "3.1.0"
 )
 
 
