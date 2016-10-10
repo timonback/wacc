@@ -9,7 +9,7 @@ object Global extends GlobalSettings {
   override def onStart(app: Application) {
     //Pillar.migrate("faker", app)
     //app.configuration.getString("cassandra.node").getOrElse(throw new IllegalArgumentException("No 'cassandra.node' config found.")
-    cassandra = new SimpleClient("192.168.11.11", 9042)
+    cassandra = new SimpleClient("127.0.0.1", 9042)
   }
 
   override def onStop(app: Application) {

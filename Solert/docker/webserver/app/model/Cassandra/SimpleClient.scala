@@ -15,7 +15,6 @@ import com.datastax.driver.core.Metadata
   */
 //https://github.com/magro/play2-scala-cassandra-sample
 class SimpleClient(node: String, port: Int) {
-
   private val cluster = Cluster.builder().addContactPoint(node).withPort(port).build()
   log(cluster.getMetadata())
   val session = cluster.connect()
