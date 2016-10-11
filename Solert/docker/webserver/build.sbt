@@ -14,10 +14,16 @@ libraryDependencies ++= Seq(
   cache,
   ws,
   "org.scalatestplus.play" %% "scalatestplus-play" % "1.5.1",
-  "datastax" % "spark-cassandra-connector" % "1.6.0-s_2.10"
+  "datastax" % "spark-cassandra-connector" % "1.6.0-s_2.10",
+  "org.reactivemongo" %% "play2-reactivemongo" % "0.11.14"
 )
 
+routesGenerator := InjectedRoutesGenerator
 
+
+fork in run := true
+
+fork in run := true
 
 fork in run := true
 
