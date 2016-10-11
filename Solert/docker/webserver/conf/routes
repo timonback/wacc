@@ -9,6 +9,8 @@ GET     /count                      controllers.CountController.count
 # An example controller showing how to write asynchronous code
 GET     /message                    controllers.AsyncController.message
 
+GET     /login                      controllers.Users.showLoginForm
+POST    /login                      controllers.Users.login
 GET     /user                       controllers.Users.index
 GET     /user/new                   controllers.Users.showCreationForm
 POST    /user/new                   controllers.Users.create

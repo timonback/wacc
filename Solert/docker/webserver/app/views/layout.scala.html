@@ -30,9 +30,10 @@
                 <div id="navbar" class="navbar-collapse collapse">
                     <ul class="nav navbar-nav">
                         <li class=@("active".when(tab == "index"))><a href="/">Home</a></li>
+                        <li class=@("active".when(tab == "user"))><a href="/user">Users</a></li>
                     </ul>
                     <ul class="nav navbar-nav navbar-right">
-                        <li><a href="#">Login</a></li>
+                        <li class=@("active".when(tab == "login"))><a href="/login">Login</a></li>
                     </ul>
                 </div><!--/.nav-collapse -->
             </div>

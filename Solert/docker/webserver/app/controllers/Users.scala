@@ -17,6 +17,7 @@ import reactivemongo.play.json._
 import reactivemongo.play.json.collection._
 import models.User
 import User._
+import reactivemongo.bson.BSONDateTime
 
 class Users @Inject() (
                            val messagesApi: MessagesApi,
@@ -55,6 +56,12 @@ class Users @Inject() (
     implicit val messages = messagesApi.preferred(request)
 
     Ok(views.html.editUser(None, User.form))
+  }
+
+  def showLoginForm = Action { request =>
+    implicit val messages = messagesApi.preferred(request)
+
+    Ok(views.html.login(User.form))
   }
 
   def showEditForm(id: String) = Action.async { request =>
@@ -123,6 +130,26 @@ class Users @Inject() (
         coll.remove(Json.obj("_id" -> id))
       }
     } yield Ok).recover { case _ => InternalServerError }
+  }
+
+  def login = Action.async { implicit request =>
+    implicit val messages = messagesApi.preferred(request)
+
+    User.form.bindFromRequest.fold(
+      errors => Future.successful(
+        Ok(views.html.login(errors))),
+
+      user => (for {
+
+        coll <- collection
+        _ <- {
+          import play.Logger
+          Logger.error(user.username)
+          // now, the last operation: remove the user
+          coll.remove(Json.obj("_id" -> user.id))
+        }
+      } yield Ok).recover { case _ => InternalServerError }
+    )
   }
 
   private def getSort(request: Request[_]): Option[JsObject] =
