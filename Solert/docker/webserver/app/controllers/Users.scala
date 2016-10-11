@@ -4,27 +4,21 @@ import javax.inject.Inject
 
 import org.joda.time.DateTime
 
-import scala.concurrent.{ Await, Future, duration }, duration.Duration
-
+import scala.concurrent.{Await, Future, Promise, duration}
+import duration.Duration
 import play.api.Logger
-
-import play.api.i18n.{ I18nSupport, MessagesApi }
-import play.api.mvc.{ Action, Controller, Request }
+import play.api.i18n.{I18nSupport, MessagesApi}
+import play.api.mvc.{Action, Controller, Request}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.{ Json, JsObject, JsString }
-
-import reactivemongo.api.gridfs.{ GridFS, ReadFile }
-
-import play.modules.reactivemongo.{
-MongoController, ReactiveMongoApi, ReactiveMongoComponents
-}
-
+import play.api.libs.json.{JsObject, JsString, Json}
+import reactivemongo.api.gridfs.{GridFS, ReadFile}
+import play.modules.reactivemongo.{MongoController, ReactiveMongoApi, ReactiveMongoComponents}
 import reactivemongo.play.json._
 import reactivemongo.play.json.collection._
+import models.User
+import User._
 
-import models.Article, Article._
-
-class Articles @Inject() (
+class Users @Inject() (
                            val messagesApi: MessagesApi,
                            val reactiveMongoApi: ReactiveMongoApi,
                            implicit val materializer: akka.stream.Materializer)
@@ -34,7 +28,7 @@ class Articles @Inject() (
 
   // get the collection 'articles'
   def collection = reactiveMongoApi.database.
-    map(_.collection[JSONCollection]("articles"))
+    map(_.collection[JSONCollection]("users"))
 
   // list all articles and sort them
   val index = Action.async { implicit request =>
@@ -45,11 +39,11 @@ class Articles @Inject() (
       flatMap(_.headOption).getOrElse("none")
 
     // the cursor of documents
-    val found = collection.map(_.find(Json.obj()).sort(sort).cursor[Article]())
+    val found = collection.map(_.find(Json.obj()).sort(sort).cursor[User]())
 
     // build (asynchronously) a list containing all the articles
-    found.flatMap(_.collect[List]()).map { articles =>
-      Ok(views.html.articles(articles, activeSort))
+    found.flatMap(_.collect[List]()).map { users =>
+      Ok(views.html.users(users, activeSort))
     }.recover {
       case e =>
         e.printStackTrace()
@@ -60,23 +54,37 @@ class Articles @Inject() (
   def showCreationForm = Action { request =>
     implicit val messages = messagesApi.preferred(request)
 
-    Ok(views.html.editArticle(None, Article.form, None))
+    Ok(views.html.editUser(None, User.form))
+  }
+
+  def showEditForm(id: String) = Action.async { request =>
+
+    def futureUser = collection.flatMap(
+      _.find(Json.obj("_id" -> id)).one[User])
+
+    for {
+      maybeUser <- futureUser
+      result <- Promise.successful(maybeUser.map { user =>
+        @inline implicit val messages = messagesApi.preferred(request)
+        Ok(views.html.editUser(Some(id), User.form.fill(user)))
+      }).future
+    } yield result.getOrElse(NotFound)
   }
 
 
   def create = Action.async { implicit request =>
     implicit val messages = messagesApi.preferred(request)
 
-    Article.form.bindFromRequest.fold(
+    User.form.bindFromRequest.fold(
       errors => Future.successful(
-        Ok(views.html.editArticle(None, errors, None))),
+        Ok(views.html.editUser(None, errors))),
 
-      // if no error, then insert the article into the 'articles' collection
-      article => collection.flatMap(_.insert(article.copy(
-        id = article.id.orElse(Some(UUID.randomUUID().toString)),
+      // if no error, then insert the user into the 'users' collection
+      user => collection.flatMap(_.insert(user.copy(
+        id = user.id.orElse(Some(UUID.randomUUID().toString)),
         creationDate = Some(new DateTime()),
         updateDate = Some(new DateTime()))
-      )).map(_ => Redirect(routes.Articles.index))
+      )).map(_ => Redirect(routes.Users.index))
     )
   }
 
@@ -84,34 +92,34 @@ class Articles @Inject() (
     implicit val messages = messagesApi.preferred(request)
     import reactivemongo.bson.BSONDateTime
 
-    Article.form.bindFromRequest.fold(
+    User.form.bindFromRequest.fold(
       errors => Future.successful(
-        Ok(views.html.editArticle(Some(id), errors, None))),
+        Ok(views.html.editUser(Some(id), errors))),
 
-      article => {
+      user => {
         // create a modifier document, ie a document that contains the update operations to run onto the documents matching the query
         val modifier = Json.obj(
           // this modifier will set the fields
           // 'updateDate', 'title', 'content', and 'publisher'
           "$set" -> Json.obj(
             "updateDate" -> BSONDateTime(new DateTime().getMillis),
-            "title" -> article.title,
-            "content" -> article.content,
-            "publisher" -> article.publisher))
+            "username" -> user.username,
+            "password" -> user.password,
+            "email" -> user.email))
 
         // ok, let's do the update
         collection.flatMap(_.update(Json.obj("_id" -> id), modifier).
-          map { _ => Redirect(routes.Articles.index) })
+          map { _ => Redirect(routes.Users.index) })
       })
   }
 
   def delete(id: String) = Action.async {
-    // let's collect all the attachments matching that match the article to delete
+    // let's collect all the attachments matching that match the user to delete
     (for {
 
       coll <- collection
       _ <- {
-        // now, the last operation: remove the article
+        // now, the last operation: remove the user
         coll.remove(Json.obj("_id" -> id))
       }
     } yield Ok).recover { case _ => InternalServerError }
@@ -125,7 +133,7 @@ class Articles @Inject() (
             field.drop(1) -> -1
           else field -> 1
         }
-        if order._1 == "title" || order._1 == "publisher" || order._1 == "creationDate" || order._1 == "updateDate"
+        if order._1 == "username" || order._1 == "email" || order._1 == "creationDate" || order._1 == "updateDate"
       } yield order._1 -> implicitly[Json.JsValueWrapper](Json.toJson(order._2))
 
       Json.obj(sortBy: _*)

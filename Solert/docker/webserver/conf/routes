@@ -9,15 +9,15 @@ GET     /count                      controllers.CountController.count
 # An example controller showing how to write asynchronous code
 GET     /message                    controllers.AsyncController.message
 
-GET     /articles                   controllers.Articles.index
-GET     /articles/new               controllers.Articles.showCreationForm
-POST    /articles/new               controllers.Articles.create
-#GET     /articles/:id               controllers.Articles.showEditForm(id)
-POST    /articles/:id               controllers.Articles.edit(id)
-DELETE  /articles/:id               controllers.Articles.delete(id)
-#POST    /articles/:id/attachments   controllers.Articles.saveAttachment(id)
-#GET     /attachments/:id            controllers.Articles.getAttachment(id)
-#DELETE /attachments/:id controllers.Articles.removeAttachment(id)
+GET     /user                       controllers.Users.index
+GET     /user/new                   controllers.Users.showCreationForm
+POST    /user/new                   controllers.Users.create
+GET     /user/:id                   controllers.Users.showEditForm(id)
+POST    /user/:id                   controllers.Users.edit(id)
+DELETE  /user/:id                   controllers.Users.delete(id)
+#POST   /user/:id/attachments       controllers.Users.saveAttachment(id)
+#GET    /user/:id                   controllers.Users.getAttachment(id)
+#DELETE /user/:id                   controllers.Users.removeAttachment(id)
 
 # WebSocket endpoints
 GET /ws/echoIndex controllers.WebSocket.echoIndex

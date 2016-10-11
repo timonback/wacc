@@ -1,0 +1,21 @@
+@(id: Option[String], form: Form[models.User])(implicit lang: play.api.i18n.Messages)
+
+@layout("Welcome to ReactiveMongo Demo") {
+    <div class="row">
+        <div class="span8">
+            <h2>
+                @if(!id.isDefined) {
+                    Add
+                } else {
+                    Edit
+                } an user</h2>
+            @helper.form(action = (if(!id.isDefined) routes.Users.create else routes.Users.edit(id.get)), 'class -> "form-horizontal") {
+                @helper.inputText(form("username"))
+                @helper.inputText(form("password"))
+                @helper.inputText(form("email"))
+                <div class="form-actions">
+                    <input class="btn btn-primary" type="submit">
+                </div>
+            }
+        </div>
+}
