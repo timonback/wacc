@@ -1,9 +1,11 @@
-@(form: Form[models.User])(implicit lang: play.api.i18n.Messages)
+@(form: Form[models.User])(implicit lang: play.api.i18n.Messages, session: play.api.mvc.Session)
 
 @layout("Login", "login"){
-    <form method="post">
-        <input type="text" name="username">
-        <input type="password" name="password">
-        <input type="submit" value="Login">
-    </form>
+    @helper.form(action = (routes.Users.login), 'class -> "form-horizontal") {
+        @helper.inputText(form("username"))
+        @helper.inputText(form("password"))
+        <div class="form-actions">
+            <input class="btn btn-primary" type="submit">
+        </div>
+    }
 }

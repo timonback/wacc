@@ -8,7 +8,7 @@ import scala.concurrent.{Await, Future, Promise, duration}
 import duration.Duration
 import play.api.Logger
 import play.api.i18n.{I18nSupport, MessagesApi}
-import play.api.mvc.{Action, Controller, Request}
+import play.api.mvc.{Action, Controller, Request, Session}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{JsObject, JsString, Json}
 import reactivemongo.api.gridfs.{GridFS, ReadFile}
@@ -20,9 +20,9 @@ import User._
 import reactivemongo.bson.BSONDateTime
 
 class Users @Inject() (
-                           val messagesApi: MessagesApi,
-                           val reactiveMongoApi: ReactiveMongoApi,
-                           implicit val materializer: akka.stream.Materializer)
+                        val messagesApi: MessagesApi,
+                        val reactiveMongoApi: ReactiveMongoApi,
+                        implicit val materializer: akka.stream.Materializer)
   extends Controller with MongoController with ReactiveMongoComponents {
 
   import java.util.UUID
@@ -33,6 +33,7 @@ class Users @Inject() (
 
   // list all articles and sort them
   val index = Action.async { implicit request =>
+
     // get a sort document (see getSort method for more information)
     val sort: JsObject = getSort(request).getOrElse(Json.obj())
 
@@ -52,19 +53,19 @@ class Users @Inject() (
     }
   }
 
-  def showCreationForm = Action { request =>
+  def showCreationForm = Action { implicit request =>
     implicit val messages = messagesApi.preferred(request)
 
     Ok(views.html.editUser(None, User.form))
   }
 
-  def showLoginForm = Action { request =>
+  def showLoginForm = Action { implicit request =>
     implicit val messages = messagesApi.preferred(request)
 
     Ok(views.html.login(User.form))
   }
 
-  def showEditForm(id: String) = Action.async { request =>
+  def showEditForm(id: String) = Action.async { implicit request =>
 
     def futureUser = collection.flatMap(
       _.find(Json.obj("_id" -> id)).one[User])
@@ -72,7 +73,8 @@ class Users @Inject() (
     for {
       maybeUser <- futureUser
       result <- Promise.successful(maybeUser.map { user =>
-        @inline implicit val messages = messagesApi.preferred(request)
+        implicit val messages = messagesApi.preferred(request)
+
         Ok(views.html.editUser(Some(id), User.form.fill(user)))
       }).future
     } yield result.getOrElse(NotFound)
@@ -139,18 +141,25 @@ class Users @Inject() (
       errors => Future.successful(
         Ok(views.html.login(errors))),
 
-      user => (for {
+      user => {
+        def futureUser = collection.flatMap(
+          _.find(Json.obj(
+            "username" -> user.username,
+            "password" -> user.password)
+          ).one[User])
 
-        coll <- collection
-        _ <- {
-          import play.Logger
-          Logger.error(user.username)
-          // now, the last operation: remove the user
-          coll.remove(Json.obj("_id" -> user.id))
-        }
-      } yield Ok).recover { case _ => InternalServerError }
-    )
+        for {
+          maybeUser <- futureUser
+          result <- Promise.successful(maybeUser.map { user =>
+            Redirect(routes.HomeController.index).withSession(new Session(Map("username"->user.username)))
+          }).future
+        } yield result.getOrElse(Redirect(routes.Users.login))
+      })
   }
+
+  def logout = Action(
+    Redirect(routes.HomeController.index()).withNewSession
+  )
 
   private def getSort(request: Request[_]): Option[JsObject] =
     request.queryString.get("sort").map { fields =>

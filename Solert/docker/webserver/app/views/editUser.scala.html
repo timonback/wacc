@@ -1,4 +1,4 @@
-@(id: Option[String], form: Form[models.User])(implicit lang: play.api.i18n.Messages)
+@(id: Option[String], form: Form[models.User])(implicit lang: play.api.i18n.Messages, session: play.api.mvc.Session)
 
 @layout("Welcome to ReactiveMongo Demo", "user") {
     <div class="row">
