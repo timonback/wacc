@@ -16,7 +16,7 @@ Vagrant.configure(2) do |config|
   $leader_ip = "192.168.10.10"
   $num_managers = 1
   $manager_start_ip = "192.168.10.11"
-  $num_workers = 1
+  $num_workers = 2
   $worker_start_ip = "192.168.10.100"
   # $replicas = 5 ##currently using --global as replication mode
   
@@ -26,7 +26,7 @@ Vagrant.configure(2) do |config|
     leader.vm.network "forwarded_port", guest: 9000, host: 9001 #wacc
     
     leader.vm.provider "virtualbox" do |v|
-      v.memory = 2048
+      v.memory = 1500
     end
 
     leader.vm.provision "shell", args: [$leader_ip], inline: <<-SHELL
@@ -42,8 +42,7 @@ Vagrant.configure(2) do |config|
     SHELL
 	
 	leader.vm.provision "shell", inline: <<-SHELL
-      docker service create --name cassandra --network services cassandra
-      # docker service create --name cassandra-cluster --network services -e CASSANDRA_SEEDS=tasks.cassandra cassandra
+	  docker service create --name cassandra --network services --endpoint-mode dnsrr --mode global -e 'CASSANDRA_SEEDS=tasks.cassandra' -e 'CASSANDRA_BROADCAST_ADDRESS=auto' -e 'CASSANDRA_LISTEN_ADDRESS_COMMAND=hostname -i' -e 'CASSANDRA_BROADCAST_ADDRESS_COMMAND=hostname -i' --mount type=bind,target=/var/lib/cassandra,source=/vol/cassandra -e MAX_HEAP_SIZE=150M -e HEAP_NEWSIZE=100M cassandra
     SHELL
   end
   
@@ -77,39 +76,19 @@ Vagrant.configure(2) do |config|
         SHELL
     end
   end
-  
-  # docker run -it --name cassandra -p 7000:7000 -p 7001:7001 -p 9042:9042 -p 7199:7199 -p 9160:9160 cassandra:latest
-  config.vm.define debug = "debug" do |debug|
-    debug.vm.hostname = "debug"
-    debug.vm.network "private_network", ip: "192.168.11.11"
-    debug.vm.network "forwarded_port", guest: 7000, host: 7001 #cassandra
-    debug.vm.network "forwarded_port", guest: 7199, host: 7200 #cassandra
-    debug.vm.network "forwarded_port", guest: 9042, host: 9043 #cassandra
-    debug.vm.network "forwarded_port", guest: 9160, host: 9161 #cassandra
-
-    debug.vm.provider "virtualbox" do |v|
-      v.memory = 2048
-    end
-  end
-  
-  config.vm.define debug2 = "debug2" do |debug2|
-    debug2.vm.hostname = "debug2"
-    debug2.vm.network "private_network", ip: "192.168.11.12"
-    debug2.vm.network "forwarded_port", guest: 7000, host: 7003 #cassandra
-    debug2.vm.network "forwarded_port", guest: 7199, host: 7201 #cassandra
-    debug2.vm.network "forwarded_port", guest: 9042, host: 9044 #cassandra
-    debug2.vm.network "forwarded_port", guest: 9160, host: 9162 #cassandra
-
-    debug2.vm.provider "virtualbox" do |v|
-      v.memory = 2048
-    end
-  end
-  
+    
+  config.vm.provision "shell", inline: <<-SHELL
+    sudo mkdir /vol
+    sudo chown ubuntu /vol
+    sudo chgrp ubuntu /vol
+    mkdir /vol/cassandra
+  SHELL
+        
   config.vm.provision "docker" do |d|
   end
   
   config.vm.provider "virtualbox" do |v|
-    v.memory = 2024
+    v.memory = 1024
   end
   
 
