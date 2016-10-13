@@ -1,50 +1,30 @@
 package controllers
 
+import java.util.UUID
 import javax.inject.Inject
 
 import org.joda.time.DateTime
 
-import scala.concurrent.{Await, Future, Promise, duration}
-import duration.Duration
-import play.api.Logger
-import play.api.i18n.{I18nSupport, MessagesApi}
+import scala.concurrent.{Future, Promise}
+import play.api.i18n.MessagesApi
 import play.api.mvc.{Action, Controller, Request, Session}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.{JsObject, JsString, Json}
-import reactivemongo.api.gridfs.{GridFS, ReadFile}
-import play.modules.reactivemongo.{MongoController, ReactiveMongoApi, ReactiveMongoComponents}
-import reactivemongo.play.json._
-import reactivemongo.play.json.collection._
 import models.User
-import User._
-import reactivemongo.bson.BSONDateTime
+import play.api.libs.json.{JsObject, Json}
+import service.UserService
+import play.modules.reactivemongo.json._
 
-class Users @Inject() (
-                        val messagesApi: MessagesApi,
-                        val reactiveMongoApi: ReactiveMongoApi,
-                        implicit val materializer: akka.stream.Materializer)
-  extends Controller with MongoController with ReactiveMongoComponents {
+class Users @Inject()(val messagesApi: MessagesApi, userService: UserService)
+  extends Controller {
 
-  import java.util.UUID
-
-  // get the collection 'articles'
-  def collection = reactiveMongoApi.database.
-    map(_.collection[JSONCollection]("users"))
 
   // list all articles and sort them
   val index = Action.async { implicit request =>
 
-    // get a sort document (see getSort method for more information)
-    val sort: JsObject = getSort(request).getOrElse(Json.obj())
-
     val activeSort = request.queryString.get("sort").
       flatMap(_.headOption).getOrElse("none")
 
-    // the cursor of documents
-    val found = collection.map(_.find(Json.obj()).sort(sort).cursor[User]())
-
-    // build (asynchronously) a list containing all the articles
-    found.flatMap(_.collect[List]()).map { users =>
+    userService.allUsers(request).map { users =>
       Ok(views.html.users(users, activeSort))
     }.recover {
       case e =>
@@ -67,8 +47,7 @@ class Users @Inject() (
 
   def showEditForm(id: String) = Action.async { implicit request =>
 
-    def futureUser = collection.flatMap(
-      _.find(Json.obj("_id" -> id)).one[User])
+    val futureUser = userService.findUserById(id)
 
     for {
       maybeUser <- futureUser
@@ -89,12 +68,15 @@ class Users @Inject() (
         Ok(views.html.editUser(None, errors))),
 
       // if no error, then insert the user into the 'users' collection
-      user => collection.flatMap(_.insert(user.copy(
-        id = user.id.orElse(Some(UUID.randomUUID().toString)),
-        creationDate = Some(new DateTime()),
-        updateDate = Some(new DateTime()))
-      )).map(_ => Redirect(routes.Users.index))
-    )
+      user =>
+        userService.insertUser(
+          user.copy(
+            id = user.id.orElse(Some(UUID.randomUUID().toString)),
+            creationDate = Some(new DateTime()),
+            updateDate = Some(new DateTime())
+          )
+        )
+    ).map(_ => Redirect(routes.Users.index))
   }
 
   def edit(id: String) = Action.async { implicit request =>
@@ -106,32 +88,22 @@ class Users @Inject() (
         Ok(views.html.editUser(Some(id), errors))),
 
       user => {
-        // create a modifier document, ie a document that contains the update operations to run onto the documents matching the query
         val modifier = Json.obj(
-          // this modifier will set the fields
-          // 'updateDate', 'title', 'content', and 'publisher'
           "$set" -> Json.obj(
             "updateDate" -> BSONDateTime(new DateTime().getMillis),
             "username" -> user.username,
             "password" -> user.password,
-            "email" -> user.email))
+            "email" -> user.email)
+        )
 
         // ok, let's do the update
-        collection.flatMap(_.update(Json.obj("_id" -> id), modifier).
-          map { _ => Redirect(routes.Users.index) })
+        userService.updateUser(id, modifier).map(_ => Redirect(routes.Users.index))
       })
   }
 
-  def delete(id: String) = Action.async {
-    // let's collect all the attachments matching that match the user to delete
-    (for {
-
-      coll <- collection
-      _ <- {
-        // now, the last operation: remove the user
-        coll.remove(Json.obj("_id" -> id))
-      }
-    } yield Ok).recover { case _ => InternalServerError }
+  def delete(id: String) = Action {
+    userService.removeUser(id)
+    Redirect(routes.Users.index)
   }
 
   def login = Action.async { implicit request =>
@@ -142,24 +114,36 @@ class Users @Inject() (
         Ok(views.html.login(errors))),
 
       user => {
-        def futureUser = collection.flatMap(
-          _.find(Json.obj(
-            "username" -> user.username,
-            "password" -> user.password)
-          ).one[User])
+        def futureUser = userService.findUserByName(user.username)
 
         for {
           maybeUser <- futureUser
-          result <- Promise.successful(maybeUser.map { user =>
-            Redirect(routes.HomeController.index).withSession(new Session(Map("username"->user.username)))
+          result <- Promise.successful(maybeUser.map { foundUser => {
+            if (foundUser.password.equals(user.password)) {
+              Redirect(routes.Home.index).withSession(new Session(Map("username" -> foundUser.username)))
+            } else {
+              Redirect(routes.Users.login)
+            }
+          }
           }).future
         } yield result.getOrElse(Redirect(routes.Users.login))
       })
   }
 
   def logout = Action(
-    Redirect(routes.HomeController.index()).withNewSession
+    Redirect(routes.Home.index()).withNewSession
   )
+
+  def getLocations(username: String): Future[List[String]] = {
+    def futureUser = userService.findUserByName(username)
+
+    for {
+      maybeUser <- futureUser
+      result <- Promise.successful(maybeUser.map { foundUser =>
+        foundUser.locations
+      }).future
+    } yield result.getOrElse(List())
+  }
 
   private def getSort(request: Request[_]): Option[JsObject] =
     request.queryString.get("sort").map { fields =>

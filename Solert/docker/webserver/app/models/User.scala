@@ -3,7 +3,7 @@ package models
 import org.joda.time.DateTime
 
 import play.api.data._
-import play.api.data.Forms.{ text, longNumber, mapping, nonEmptyText, optional }
+import play.api.data.Forms.{ text, longNumber, mapping, nonEmptyText, optional, list }
 import play.api.data.validation.Constraints.pattern
 
 import reactivemongo.bson.{
@@ -15,6 +15,7 @@ case class User(
                     username: String,
                     password: String,
                     email: Option[String],
+                    locations: List[String],
                     creationDate: Option[DateTime],
                     updateDate: Option[DateTime])
 
@@ -43,7 +44,7 @@ object User {
         val creationDate = (obj \ "creationDate").asOpt[Long]
         val updateDate = (obj \ "updateDate").asOpt[Long]
 
-        JsSuccess(User(id, username, password, email,
+        JsSuccess(User(id, username, password, email, List(),
           creationDate.map(new DateTime(_)),
           updateDate.map(new DateTime(_))))
 
@@ -62,14 +63,16 @@ object User {
       "username" -> nonEmptyText,
       "password" -> nonEmptyText,
       "email" -> optional(text),
+      "locations" -> optional(list(text)),
       "creationDate" -> optional(longNumber),
       "updateDate" -> optional(longNumber)) {
-      (id, username, password, email, creationDate, updateDate) =>
+      (id, username, password, email, locations, creationDate, updateDate) =>
         User(
           id,
           username,
           password,
           email,
+          locations.getOrElse(List()),
           creationDate.map(new DateTime(_)),
           updateDate.map(new DateTime(_)))
     } { user =>
@@ -78,6 +81,7 @@ object User {
           user.username,
           user.password,
           user.email,
+          Option(user.locations),
           user.creationDate.map(_.getMillis),
           user.updateDate.map(_.getMillis)))
     })

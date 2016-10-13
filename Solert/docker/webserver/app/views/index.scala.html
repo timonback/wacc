@@ -2,7 +2,7 @@
  * This template takes a single argument, a String containing a
  * message to display.
  *@
-@(message: String)(implicit session: play.api.mvc.Session)
+@(message: String, locations: List[String])(implicit session: play.api.mvc.Session)
 
 @layout(message, "index"){
  @solertgraph()
