@@ -1,16 +1,37 @@
+@(locations: List[String])
 
-<form onsubmit="return false;">
-    <input id="location" type="text" placeholder="Location" />
-    <input type="hidden" id="lat" />
-    <input type="hidden" id="lng" />
-    <button type="submit" id="liveData">buienradar Livedata</button>
-</form>
-<p id="error-output" />
+<div class="row">
+    <div class="col-md-9">
+        <form onsubmit="return false;">
+            <input id="location" type="text" placeholder="Location" />
+            <input type="hidden" id="lat" />
+            <input type="hidden" id="lng" />
+            <button type="submit" id="liveData">buienradar Livedata</button>
+        </form>
+        <p id="error-output" />
+    </div>
+    @if(!locations.isEmpty) {
+        <div class="col-md-3">
+            <h3>Saved locations</h3>
+            <ul class="list-group">
+            @for(location <- locations) {
+                <li class="list-group-item"><a href="@routes.Report.info(location)">@location</a></li>
+            }
+            </ul>
+        </div>
+    }
+</div>
 
-<h2>3 hour forecast</h2>
-<canvas id="chart3H" style="max-width:600px; min-height:250px;"></canvas>
-<h2>24 hour forecast</h2>
-<canvas id="chart24H" style="max-width:600px; min-height:250px;"></canvas>
+<div class="row">
+    <div class="col-md-6">
+        <h2>3 hour forecast</h2>
+        <canvas id="chart3H" style="min-height: 250px;"></canvas>
+    </div>
+    <div class="col-md-6">
+        <h2>24 hour forecast</h2>
+        <canvas id="chart24H" style="min-height: 250px;"></canvas>
+    </div>
+</div>
 
 <script src="@routes.Assets.versioned("javascripts/moment.min.js")" type="text/javascript"></script>
 <script src="@routes.Assets.versioned("javascripts/chart.bundle.min.js")" type="text/javascript"></script>
@@ -64,25 +85,27 @@
         function updateCharts(time3H, values3H, time24H, values24H) {
             console.log("Updating chart...");
             updateChart(chart3H, time3H, values3H);
-            updateChart(chart24H,time24H, values24H);
+            updateChart(chart24H, time24H, values24H);
         }
-        
+
         function liveDataLocation() {
             $('#error-output').text("");
-            if($('#location').val() == "") { $('#location').val("Groningen"); }
-            $.getJSON("http://maps.googleapis.com/maps/api/geocode/json?address="+$("#location").val(), function (data) {
-                if(data.results.length == 0) {
-                  $('#error-output').text("Location not found");
+            if ($('#location').val() == "") {
+                $('#location').val("Groningen");
+            }
+            $.getJSON("http://maps.googleapis.com/maps/api/geocode/json?address=" + $("#location").val(), function (data) {
+                if (data.results.length == 0) {
+                    $('#error-output').text("Location not found");
                 } else {
                     $("#lat").val(data.results[0].geometry.location.lat);
                     $("#lng").val(data.results[0].geometry.location.lng);
-                  liveData(data.results[0].geometry.location.lat, data.results[0].geometry.location.lng);
+                    liveData(data.results[0].geometry.location.lat, data.results[0].geometry.location.lng);
                 }
             });
         }
 
         function liveData(lat, lon) {
-            $.getJSON("http://graphdata.buienradar.nl/forecast/jsonsun/?lat="+lat+"&lon="+lon, function (data) {
+            $.getJSON("http://graphdata.buienradar.nl/forecast/jsonsun/?lat=" + lat + "&lon=" + lon, function (data) {
                 var timestamps = [];
                 var values = [];
                 $.each(data.forecasts, function (key, entry) {
@@ -90,11 +113,11 @@
                     values.push(entry.value);
                 });
                 updateChart(chart3H, timestamps, values);
-                if(timestamps.length == 0) {
+                if (timestamps.length == 0) {
                     $('#error-output').text("No sun forecast for the next 3 hours, might it be night?");
                 }
             });
-            $.getJSON("http://api.buienradar.nl/data/graphdata/1.0/sunforecast/24hours?lat="+lat+"&lon="+lon, function (data) {
+            $.getJSON("http://api.buienradar.nl/data/graphdata/1.0/sunforecast/24hours?lat=" + lat + "&lon=" + lon, function (data) {
                 var timestamps = [];
                 var values = [];
                 $.each(data.forecasts, function (key, entry) {
@@ -104,6 +127,7 @@
                 updateChart(chart24H, timestamps, values);
             });
         }
+
         $("#liveData").click(liveDataLocation);
 
         var webSocket = $.simpleWebSocket({url: " ws://" + window.location.host + "/ws/weather"});
@@ -126,6 +150,7 @@
             });
             window.setTimeout(requestWSUpdate, 10000);
         }
+
         requestWSUpdate();
     })
 </script>
