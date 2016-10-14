@@ -10,14 +10,16 @@
         </form>
         <p id="error-output" />
     </div>
-    <div class="col-md-3">
-        <h3>Saved locations</h3>
-        <ul class="list-group">
+    @if(!locations.isEmpty) {
+        <div class="col-md-3">
+            <h3>Saved locations</h3>
+            <ul class="list-group">
             @for(location <- locations) {
                 <li class="list-group-item"><a href="@routes.Report.info(location)">@location</a></li>
             }
-        </ul>
-    </div>
+            </ul>
+        </div>
+    }
 </div>
 
 <div class="row">

@@ -1,7 +1,6 @@
 package models
 
 import org.joda.time.DateTime
-import play.Logger
 import play.api.data._
 import play.api.data.Forms.{list, longNumber, mapping, nonEmptyText, optional, text}
 import play.api.data.validation.Constraints.pattern
