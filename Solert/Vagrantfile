@@ -38,8 +38,8 @@ Vagrant.configure(2) do |config|
     SHELL
 
 	leader.vm.provision "shell", args: [$leader_ip], inline: <<-SHELL
-      docker service create --name webserver -p 9000:9000 --mode global timonback/wacc:webserver
       docker service create -p 27017:27017 --name mongo --mode global mongo
+      docker service create --name webserver -p 9000:9000 --mode global --link mongo timonback/wacc:webserver
     SHELL
   end
   

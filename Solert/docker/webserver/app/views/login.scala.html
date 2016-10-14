@@ -3,7 +3,7 @@
 @layout("Login", "login"){
     @helper.form(action = (routes.Users.login), 'class -> "form-horizontal") {
         @helper.inputText(form("username"))
-        @helper.inputText(form("password"))
+        @helper.inputPassword(form("password"))
         <div class="form-actions">
             <input class="btn btn-primary" type="submit">
         </div>

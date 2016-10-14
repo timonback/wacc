@@ -10,9 +10,11 @@ import play.api.i18n.MessagesApi
 import play.api.mvc.{Action, Controller, Request, Session}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import models.User
+import play.Logger
 import play.api.libs.json.{JsObject, Json}
 import service.UserService
 import play.modules.reactivemongo.json._
+import reactivemongo.bson.BSONArray
 
 class Users @Inject()(val messagesApi: MessagesApi, userService: UserService)
   extends Controller {
@@ -54,6 +56,8 @@ class Users @Inject()(val messagesApi: MessagesApi, userService: UserService)
       result <- Promise.successful(maybeUser.map { user =>
         implicit val messages = messagesApi.preferred(request)
 
+        Logger.info(user.toString)
+
         Ok(views.html.editUser(Some(id), User.form.fill(user)))
       }).future
     } yield result.getOrElse(NotFound)
@@ -93,11 +97,16 @@ class Users @Inject()(val messagesApi: MessagesApi, userService: UserService)
             "updateDate" -> BSONDateTime(new DateTime().getMillis),
             "username" -> user.username,
             "password" -> user.password,
-            "email" -> user.email)
+            "email" -> user.email,
+            "locations" -> user.locations)
         )
 
+        Logger.info(modifier.toString())
+
         // ok, let's do the update
-        userService.updateUser(id, modifier).map(_ => Redirect(routes.Users.index))
+        userService.updateUser(id, modifier).map(_ =>
+          //Redirect(routes.Users.showEditForm(id)))
+          Ok(views.html.editUser(Some(id), User.form.fill(user))))
       })
   }
 

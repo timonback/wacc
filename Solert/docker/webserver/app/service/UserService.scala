@@ -6,6 +6,7 @@ import play.modules.reactivemongo.{MongoController, ReactiveMongoApi, ReactiveMo
 import models.User
 import reactivemongo.play.json._
 import User._
+import play.Logger
 import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.Request
 

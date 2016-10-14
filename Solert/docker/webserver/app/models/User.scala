@@ -1,14 +1,11 @@
 package models
 
 import org.joda.time.DateTime
-
+import play.Logger
 import play.api.data._
-import play.api.data.Forms.{ text, longNumber, mapping, nonEmptyText, optional, list }
+import play.api.data.Forms.{list, longNumber, mapping, nonEmptyText, optional, text}
 import play.api.data.validation.Constraints.pattern
-
-import reactivemongo.bson.{
-BSONDateTime, BSONDocument, BSONObjectID
-}
+import reactivemongo.bson.{BSONDateTime, BSONDocument, BSONObjectID}
 
 case class User(
                     id: Option[String],
@@ -30,6 +27,7 @@ object User {
       "username" -> user.username,
       "password" -> user.password,
       "email" -> user.email,
+      "locations" -> user.locations,
       "creationDate" -> user.creationDate.fold(-1L)(_.getMillis),
       "updateDate" -> user.updateDate.fold(-1L)(_.getMillis))
   }
@@ -41,10 +39,11 @@ object User {
         val username = (obj \ "username").as[String]
         val password = (obj \ "password").as[String]
         val email = (obj \ "email").asOpt[String]
+        val locations = (obj \ "locations").as[List[String]]
         val creationDate = (obj \ "creationDate").asOpt[Long]
         val updateDate = (obj \ "updateDate").asOpt[Long]
 
-        JsSuccess(User(id, username, password, email, List(),
+        JsSuccess(User(id, username, password, email, locations,
           creationDate.map(new DateTime(_)),
           updateDate.map(new DateTime(_))))
 

@@ -1,21 +1,44 @@
 @(id: Option[String], form: Form[models.User])(implicit lang: play.api.i18n.Messages, session: play.api.mvc.Session)
 
-@layout("Welcome to ReactiveMongo Demo", "user") {
+@layout("User management", "user") {
     <div class="row">
-        <div class="span8">
-            <h2>
-                @if(!id.isDefined) {
-                    Add
-                } else {
-                    Edit
-                } an user</h2>
-            @helper.form(action = (if(!id.isDefined) routes.Users.create else routes.Users.edit(id.get)), 'class -> "form-horizontal") {
-                @helper.inputText(form("username"))
-                @helper.inputText(form("password"))
-                @helper.inputText(form("email"))
-                <div class="form-actions">
-                    <input class="btn btn-primary" type="submit">
-                </div>
+        <h2>
+            @if(!id.isDefined) {
+                Add
+            } else {
+                Edit
+            } an user</h2>
+
+        @helper.form(action = (if(!id.isDefined) routes.Users.create else routes.Users.edit(id.get)), 'class -> "form-horizontal") {
+            @helper.inputText(form("username"))
+            @helper.inputText(form("password"))
+            @helper.inputText(form("email"))
+
+            @helper.input(form("locations")) { (id, name, value, args) =>
+                <select name="@(name+"[]")" id="@id" class="tagSelect" multiple="multiple" @toHtmlArgs(args)>
+
+                @for(entry <- form.data) {
+                    @if(entry._1.startsWith(name)) {
+                        <option selected="selected">@entry._2</option>
+                    }
+                }
+                </select>
             }
-        </div>
+            <div class="form-actions">
+                <input class="btn btn-primary" type="submit">
+            </div>
+        }
+    </div>
+
+    <script src="@routes.Assets.versioned("javascripts/select2/select2.min.js")" type="text/javascript"></script>
+    <link rel="stylesheet" media="screen" href="@routes.Assets.versioned("stylesheets/select2.css")">
+
+    <script type="text/javascript">
+        $(document).ready(function () {
+            $(".tagSelect").select2({
+                tags: true,
+                tokenSeparators: [',']
+            });
+        });
+    </script>
 }
