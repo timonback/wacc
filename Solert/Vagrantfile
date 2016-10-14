@@ -31,7 +31,7 @@ Vagrant.configure(2) do |config|
 
     leader.vm.provision "shell", args: [$leader_ip], inline: <<-SHELL
       docker swarm init --advertise-addr $1
-      mkdir /vagrant/docker-join-tokens
+      mkdir -p /vagrant/docker-join-tokens
       docker swarm join-token worker --quiet > /vagrant/docker-join-tokens/worker
       docker swarm join-token manager --quiet > /vagrant/docker-join-tokens/manager
       docker network create --driver overlay services
@@ -78,10 +78,10 @@ Vagrant.configure(2) do |config|
   end
     
   config.vm.provision "shell", inline: <<-SHELL
-    sudo mkdir /vol
+    sudo mkdir -p /vol
     sudo chown ubuntu /vol
     sudo chgrp ubuntu /vol
-    mkdir /vol/cassandra
+    mkdir -p /vol/cassandra
   SHELL
         
   config.vm.provision "docker" do |d|
