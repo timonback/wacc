@@ -17,25 +17,25 @@ private object Defaults {
 
 class SolertService(val keyspace: KeySpaceDef) extends Database(keyspace) {
 
-  object data extends ConcreteSolertEntry with keyspace.Connector
+  object forecast extends ConcreteSolertEntry with keyspace.Connector
 
-  def getById(location: UUID): Future[Option[SolertEntry]] = data.getById(location)
+  def getById(location: String): Future[Option[SolertEntry]] = forecast.getById(location)
 
-  def getEntriesNext3Hours(location: UUID): Future[Seq[SolertEntry]] = data.getFutureEntries(location, 3)
+  def getEntriesNext3Hours(location: String): Future[Seq[SolertEntry]] = forecast.getFutureEntries(location, 150)
 
-  def getEntriesNext24Hours(location: UUID): Future[Seq[SolertEntry]] = data.getFutureEntries(location, 24)
+  def getEntriesNext24Hours(location: String): Future[Seq[SolertEntry]] = forecast.getFutureEntries(location, 1440)
 
-  def generateData(uuid: UUID) = {
-    Await.ready(data.create.ifNotExists().future(), Duration.Inf)
+  def generateData(location: String) = {
+    Await.ready(forecast.create.ifNotExists().future(), Duration.Inf)
 
-    if (Await.result(getEntriesNext3Hours(uuid), Duration.Inf).isEmpty) {
-      Logger.info("Generate data for "+uuid.toString)
+    if (Await.result(getEntriesNext3Hours(location), Duration.Inf).isEmpty) {
+      Logger.info("Generate data for " + location.toString)
       for (
         counter <- 0 to 1440;
         if counter % 15 == 0
       ) {
         Await.result(
-          data.store(SolertEntry(uuid, Random.nextInt(100), new DateTime().plusMinutes(counter))),
+          forecast.store(SolertEntry(location, Random.nextInt(100), new DateTime().plusMinutes(counter))),
           Duration.Inf
         )
       }

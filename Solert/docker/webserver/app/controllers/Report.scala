@@ -23,11 +23,11 @@ class Report @Inject()(val userService: UserService) extends Controller {
     for {
       maybeUser <- futureUser
       result <- Promise.successful(maybeUser.map { foundUser => {
-        Ok(views.html.report("Solert " + location, foundUser.locations))
+        Ok(views.html.report("Solert", location, foundUser.locations))
       }
       }).future
     } yield result.getOrElse(
-      Ok(views.html.report("Solert " + location, List()))
+      Ok(views.html.report("Solert", location, List()))
     )
   }
 }

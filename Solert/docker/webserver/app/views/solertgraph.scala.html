@@ -1,9 +1,9 @@
-@(locations: List[String])
+@(currentLocation: String, locations: List[String])
 
 <div class="row">
     <div class="col-md-9">
         <form onsubmit="return false;">
-            <input id="location" type="text" placeholder="Location" value="Amsterdam" />
+            <input id="location" type="text" placeholder="Location" value="@currentLocation" />
             <input type="hidden" id="lat" />
             <input type="hidden" id="lng" />
             <button type="submit" id="liveData">buienradar Livedata</button>
@@ -84,9 +84,6 @@
 
         function liveDataLocation() {
             $('#error-output').text("");
-            if ($('#location').val() == "") {
-                $('#location').val("Groningen");
-            }
             $.getJSON("http://maps.googleapis.com/maps/api/geocode/json?address=" + $("#location").val(), function (data) {
                 if (data.results.length == 0) {
                     $('#error-output').text("Location not found");

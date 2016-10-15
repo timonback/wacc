@@ -34,24 +34,23 @@ class WebSocket @Inject()(implicit system: ActorSystem, materializer: Materializ
       val lat = (in \ "lat").as[String]
       val lng = (in \ "lng").as[String]
 
-      def uuid = UUID.fromString("d2a2f98e-c2d3-4256-8bb6-1059248a15ea")
-      SolertServiceImpl.generateData(uuid)
+      SolertServiceImpl.generateData(location)
 
       def hours3 = for {
-        dataSeq <- SolertServiceImpl.getEntriesNext3Hours(uuid)
+        dataSeq <- SolertServiceImpl.getEntriesNext3Hours(location)
         result <- Promise.successful(dataSeq.map { entry =>
           Json.obj(
-            "time" -> entry.time,
+            "time" -> entry.datetime,
             "value" -> entry.value
           )
         }.toList).future
       } yield result
 
       def hours24 = for {
-        dataSeq <- SolertServiceImpl.getEntriesNext24Hours(uuid)
+        dataSeq <- SolertServiceImpl.getEntriesNext24Hours(location)
         result <- Promise.successful(dataSeq.map { entry =>
           Json.obj(
-            "time" -> entry.time,
+            "time" -> entry.datetime,
             "value" -> entry.value
           )
         }.toList).future
