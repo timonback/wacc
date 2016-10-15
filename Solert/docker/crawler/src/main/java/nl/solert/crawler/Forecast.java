@@ -37,24 +37,20 @@ public class Forecast {
     @Column
     private String location;
 
-    @ClusteringColumn(value = 2, asc = false)
+    @ClusteringColumn(value = 1, asc = false)
     private Date datetime;
 
-    @ClusteringColumn(1)
-    private Boolean threeHourForecast;
-
     @Column
-    private String value;
+    private int value;
 
     public static final SimpleDateFormat TIME_FORMAT = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
 
     public Forecast() throws ParseException {
-        this("Earth", false, "1970-1-1T00:00:00", "0");
+        this("Earth", "1970-1-1T00:00:00", 0);
     }
 
-    public Forecast(String location, Boolean threeHourForecast, String datetime, String value) throws ParseException {
+    public Forecast(String location, String datetime, int value) throws ParseException {
         this.location = location;
-        this.threeHourForecast = threeHourForecast;
         this.datetime = TIME_FORMAT.parse(datetime);
         this.value = value;
     }
@@ -67,28 +63,20 @@ public class Forecast {
         return datetime;
     }
 
-    public String getValue() {
+    public int getValue() {
         return value;
-    }
-
-    public Boolean getThreeHourForecast() {
-        return threeHourForecast;
     }
 
     public void setLocation(String location) {
         this.location = location;
     }
 
-    public void setValue(String value) {
+    public void setValue(int value) {
         this.value = value;
     }
 
     public void setDatetime(Date datetime) {
         this.datetime = datetime;
-    }
-
-    public void setThreeHourForecast(Boolean threeHourForecast) {
-        this.threeHourForecast = threeHourForecast;
     }
 
     @Override

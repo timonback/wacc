@@ -28,7 +28,7 @@ public enum Env {
     UPDATE_TIME("30000"),
     KEYSPACE("SOLERT"),
     KEYSPACE_REPLICATION("{'class':'SimpleStrategy', 'replication_factor':1}"),
-    URL_24H("http://api.buienradar.nl/data/graphdata/1.0/sunforecast/24hours"),
+    URL_24H("http://api.buienradar.nl/data/graphdata/1.0/sunforecast/24hours/"),
     URL_3H("http://graphdata.buienradar.nl/forecast/jsonsun/");
 
     private final String defaultValue;

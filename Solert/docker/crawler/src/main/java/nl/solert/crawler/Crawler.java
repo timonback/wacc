@@ -38,31 +38,39 @@ import org.apache.commons.io.IOUtils;
  *
  * @author loetermann
  */
-public class Crawler {
+public class Crawler
+{
 
     public static String URL_24H, URL_3H;
 
     /**
-     * @param args the command line arguments
+     * @param args
+     *            the command line arguments
      */
-    public static void main(String[] args) {
-        try {
+    public static void main(String[] args)
+    {
+        try
+        {
             String keyspace = Env.KEYSPACE.getValue();
             String keyspaceReplication = Env.KEYSPACE_REPLICATION.getValue();
             long updateTime = Long.parseLong(Env.UPDATE_TIME.getValue());
             URL_3H = Env.URL_3H.getValue();
             URL_24H = Env.URL_24H.getValue();
-            
+
             Crawler crawler = new Crawler(keyspace, keyspaceReplication, args);
-            while (true) {
+            while (true)
+            {
                 long startTime = System.currentTimeMillis();
                 crawler.updateForecasts();
                 long timeNeeded = System.currentTimeMillis() - startTime;
-                if (timeNeeded < updateTime) {
+                if (timeNeeded < updateTime)
+                {
                     Thread.sleep(updateTime - timeNeeded);
                 }
             }
-        } catch (Exception ex) {
+        }
+        catch (Exception ex)
+        {
             Logger.getLogger(Crawler.class.getName()).log(Level.SEVERE, null, ex);
             System.exit(1);
         }
@@ -71,66 +79,95 @@ public class Crawler {
     private Forecast_Manager forecastManager;
     private Location_Manager locationManager;
 
-    public Crawler(String keyspace, String keyspaceReplication, String... cassandraAddresses) {
+    public Crawler(String keyspace, String keyspaceReplication, String... cassandraAddresses)
+    {
         Cluster cluster = Cluster.builder().addContactPoints(cassandraAddresses).build();
-        try {
+        try
+        {
             connectToCassandra(keyspace, keyspaceReplication, cluster);
-        } catch (InvalidQueryException ex) {
+        }
+        catch (InvalidQueryException ex)
+        {
             Logger.getLogger(Crawler.class.getName()).log(Level.SEVERE, null, ex);
-            Logger.getLogger(Crawler.class.getName()).log(Level.INFO, "Trying to create keyspace {0}", keyspace);
+            Logger.getLogger(Crawler.class.getName())
+                  .log(Level.INFO, "Trying to create keyspace {0}", keyspace);
             cluster.connect().execute("CREATE KEYSPACE IF NOT EXISTS " + keyspace
-                    + " WITH replication = " + keyspaceReplication + ";");
+                            + " WITH replication = " + keyspaceReplication + ";");
 
             connectToCassandra(keyspace, keyspaceReplication, cluster);
         }
     }
 
-    private void connectToCassandra(String keyspace, String keyspaceReplication, Cluster cluster) {
+    private void connectToCassandra(String keyspace, String keyspaceReplication, Cluster cluster)
+    {
         Logger.getLogger(Crawler.class.getName()).log(Level.INFO, "Connecting to cassandra...");
-        ManagerFactory managerFactory = ManagerFactoryBuilder.builder(cluster).
-                withDefaultKeyspaceName(keyspace).doForceSchemaCreation(true).build();
+        ManagerFactory managerFactory = ManagerFactoryBuilder.builder(cluster)
+                                                             .withDefaultKeyspaceName(keyspace)
+                                                             .doForceSchemaCreation(true)
+                                                             .build();
         forecastManager = managerFactory.forForecast();
         locationManager = managerFactory.forLocation();
+
+        locationManager.crud().insert(new Location("Amsterdam", 52.3702157, 4.8951679)).execute();
+        locationManager.crud().insert(new Location("Amsterdam", 53.2193835, 6.56650179)).execute();
+
         Logger.getLogger(Crawler.class.getName()).log(Level.INFO, "Connection established");
     }
 
-    public void updateForecasts() {
+    public void updateForecasts()
+    {
         System.out.println("[" + new Date() + "] Updating forecasts for all cities ...");
-        Iterator<Location> it = locationManager.dsl().select().
-                allColumns_FromBaseTable().without_WHERE_Clause().iterator();
-        while (it.hasNext()) {
+        Iterator<Location> it = locationManager.dsl()
+                                               .select()
+                                               .allColumns_FromBaseTable()
+                                               .without_WHERE_Clause()
+                                               .iterator();
+        while (it.hasNext())
+        {
             updateForecastForLocation(it.next());
         }
         System.out.println("[" + new Date() + "] Done.");
     }
 
-    public void updateForecastForLocation(Location location) {
-        System.out.print("[" + new Date() + "]    Updating forecast for: " + location.getName() + " ");
-        for (Forecast forecast : getSunForecast(location, true)) {
+    public void updateForecastForLocation(Location location)
+    {
+        System.out.print("[" + new Date() + "]    Updating forecast for: " + location.getName()
+                        + " ");
+        for (Forecast forecast : getSunForecast(location, false))
+        {
             forecastManager.crud().insert(forecast).execute();
             System.out.print(".");
         }
-        for (Forecast forecast : getSunForecast(location, false)) {
+        for (Forecast forecast : getSunForecast(location, true))
+        {
             forecastManager.crud().insert(forecast).execute();
             System.out.print(".");
         }
         System.out.println(" Done.");
     }
 
-    public Forecast[] getSunForecast(Location location, boolean threeHourForecast) {
-        try {
-            String response = IOUtils.toString(
-                    new URL(threeHourForecast ? URL_3H : URL_24H
-                            + "?lat=" + location.getLat() + "&lon" + location.getLon()), Charsets.UTF_8);
-            JsonArray forecasts = new JsonParser().parse(response).getAsJsonObject().get("forecasts").getAsJsonArray();
+    public Forecast[] getSunForecast(Location location, boolean threeHourForecast)
+    {
+        try
+        {
+            URL url = new URL((threeHourForecast ? URL_3H : URL_24H) + "?lat=" + location.getLat()
+                            + "&lon=" + location.getLon());
+            String response = IOUtils.toString(url, Charsets.UTF_8);
+            JsonArray forecasts = new JsonParser().parse(response)
+                                                  .getAsJsonObject()
+                                                  .get("forecasts")
+                                                  .getAsJsonArray();
             Forecast[] result = new Forecast[forecasts.size()];
-            for (int i = 0; i < result.length; i++) {
+            for (int i = 0; i < result.length; i++)
+            {
                 String datetime = forecasts.get(i).getAsJsonObject().get("datetime").getAsString();
-                String value = forecasts.get(i).getAsJsonObject().get("value").getAsString();
-                result[i] = new Forecast(location.getName(), threeHourForecast, datetime, value);
+                int value = forecasts.get(i).getAsJsonObject().get("value").getAsInt();
+                result[i] = new Forecast(location.getName(), datetime, value);
             }
             return result;
-        } catch (IOException | ParseException ex) {
+        }
+        catch (IOException | ParseException ex)
+        {
             Logger.getLogger(Crawler.class.getName()).log(Level.SEVERE, null, ex);
         }
         return new Forecast[0];
