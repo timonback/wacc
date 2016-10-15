@@ -109,7 +109,7 @@ public class Crawler
         locationManager = managerFactory.forLocation();
 
         locationManager.crud().insert(new Location("Amsterdam", 52.3702157, 4.8951679)).execute();
-        locationManager.crud().insert(new Location("Amsterdam", 53.2193835, 6.56650179)).execute();
+        locationManager.crud().insert(new Location("Groningen", 53.2193835, 6.56650179)).execute();
 
         Logger.getLogger(Crawler.class.getName()).log(Level.INFO, "Connection established");
     }

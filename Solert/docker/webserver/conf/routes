@@ -2,7 +2,6 @@
 # This file defines all application routes (Higher priority routes first)
 # ~~~~
 
-# An example controller showing a sample home page
 GET     /                           controllers.Home.index
 GET     /report                     controllers.Report.index
 GET     /report/:location           controllers.Report.info(location)
@@ -16,9 +15,6 @@ POST    /user/new                   controllers.Users.create
 GET     /user/:id                   controllers.Users.showEditForm(id)
 POST    /user/:id                   controllers.Users.edit(id)
 DELETE  /user/:id                   controllers.Users.delete(id)
-#POST   /user/:id/attachments       controllers.Users.saveAttachment(id)
-#GET    /user/:id                   controllers.Users.getAttachment(id)
-#DELETE /user/:id                   controllers.Users.removeAttachment(id)
 
 # WebSocket endpoints
 GET     /ws/weather                 controllers.WebSocket.weather

@@ -1,7 +1,5 @@
 package services
 
-import java.util.UUID
-
 import com.websudos.phantom.dsl._
 import models.{ConcreteSolertEntry, SolertEntry}
 import play.api.Logger

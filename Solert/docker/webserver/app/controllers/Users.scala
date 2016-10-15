@@ -11,9 +11,9 @@ import play.api.mvc.{Action, Controller, Request, Session}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import models.User
 import play.api.libs.json.{JsObject, Json}
-import service.UserService
 import play.modules.reactivemongo.json._
 import reactivemongo.bson.BSONArray
+import services.UserService
 
 class Users @Inject()(val messagesApi: MessagesApi, userService: UserService)
   extends Controller {

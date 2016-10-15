@@ -1,14 +1,15 @@
-package service
-import scala.concurrent.ExecutionContext.Implicits.global
+package services
+
 import javax.inject.Inject
 
-import play.modules.reactivemongo.{MongoController, ReactiveMongoApi, ReactiveMongoComponents}
 import models.User
-import reactivemongo.play.json._
-import User._
+import models.User._
 import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.Request
+import play.modules.reactivemongo.{MongoController, ReactiveMongoApi, ReactiveMongoComponents}
+import reactivemongo.play.json._
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 

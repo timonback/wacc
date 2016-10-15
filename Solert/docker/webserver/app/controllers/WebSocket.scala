@@ -2,24 +2,18 @@ package controllers
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import java.text.SimpleDateFormat
-import java.util.UUID
-import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 import akka.actor.ActorSystem
 import akka.stream.Materializer
 import akka.stream.scaladsl.Flow
-import models.SolertEntry
-import org.joda.time.DateTime
 import play.Logger
-import play.api.libs.iteratee.{Enumerator, Iteratee}
 import play.api.libs.json._
 import play.api.mvc.{Controller, WebSocket}
 import services.SolertServiceImpl
 
-import scala.concurrent.{Await, Future, Promise}
+import scala.concurrent.{Await, Promise}
 import scala.concurrent.duration.Duration
-import scala.util.Random
 
 
 class WebSocket @Inject()(implicit system: ActorSystem, materializer: Materializer) extends Controller {
