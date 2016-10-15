@@ -1,35 +1,66 @@
 package controllers
+
+import scala.concurrent.ExecutionContext.Implicits.global
 import java.text.SimpleDateFormat
+import java.util.UUID
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 import akka.actor.ActorSystem
 import akka.stream.Materializer
 import akka.stream.scaladsl.Flow
+import models.SolertEntry
 import org.joda.time.DateTime
+import play.Logger
+import play.api.libs.iteratee.{Enumerator, Iteratee}
 import play.api.libs.json._
-import play.api.libs.streams.ActorFlow
 import play.api.mvc.{Controller, WebSocket}
+import services.SolertServiceImpl
 
+import scala.concurrent.{Await, Future, Promise}
+import scala.concurrent.duration.Duration
 import scala.util.Random
 
-/**
-  * CustomWebSocket is a controller which demo's some of the WebSocket functionality.
-  *
-  * @param system Implicit Akka system, injected by Play
-  * @param materializer Implicit Akka materializer, injected by Play
-  */
+
 class WebSocket @Inject()(implicit system: ActorSystem, materializer: Materializer) extends Controller {
 
-  val format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssz");
+  val format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssz")
+  val SolertService = SolertServiceImpl
 
-  def weather = WebSocket.accept[JsValue, JsValue] { request => // This WebSocket accepts and returns JsValue (JSON objects)
-    Flow.fromFunction { in =>
-      Json.obj( // Construct a JSON object using Play Json
+  def weather = WebSocket.accept[JsValue, JsValue] { request =>
+    Flow.fromFunction { in: JsValue =>
+      Logger.info(in.toString)
+      val location = (in \ "location").as[String]
+      val lat = (in \ "lat").as[String]
+      val lng = (in \ "lng").as[String]
+
+      def uuid = UUID.fromString("d2a2f98e-c2d3-4256-8bb6-1059248a15ea")
+      SolertServiceImpl.generateData(uuid)
+
+      def hours3 = for {
+        dataSeq <- SolertServiceImpl.getEntriesNext3Hours(uuid)
+        result <- Promise.successful(dataSeq.map { entry =>
+          Json.obj(
+            "time" -> entry.time,
+            "value" -> entry.value
+          )
+        }.toList).future
+      } yield result
+
+      def hours24 = for {
+        dataSeq <- SolertServiceImpl.getEntriesNext24Hours(uuid)
+        result <- Promise.successful(dataSeq.map { entry =>
+          Json.obj(
+            "time" -> entry.time,
+            "value" -> entry.value
+          )
+        }.toList).future
+      } yield result
+
+      Json.obj(
         "original-request" -> in,
-        "time3H"       -> Json.arr(format.format(DateTime.now.toDate), format.format(DateTime.now.plusMinutes(15).toDate), format.format(DateTime.now.plusMinutes(30).toDate)),
-        "values3H"     -> Json.toJson(Seq.fill(3)(Random.nextInt(100))),
-        "time24H"      -> Json.arr(format.format(DateTime.now.toDate), format.format(DateTime.now.plusMinutes(15).toDate), format.format(DateTime.now.plusMinutes(30).toDate)),
-        "values24H"    -> Json.toJson(Seq.fill(3)(Random.nextInt(100)))
+        "hours3" -> Json.toJson(Await.result(hours3, Duration.fromNanos(1000000000))),
+        "hours24" -> Json.toJson(Await.result(hours24, Duration.fromNanos(1000000000)))
       )
     }
   }

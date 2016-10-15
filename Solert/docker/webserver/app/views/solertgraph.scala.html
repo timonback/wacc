@@ -3,7 +3,7 @@
 <div class="row">
     <div class="col-md-9">
         <form onsubmit="return false;">
-            <input id="location" type="text" placeholder="Location" />
+            <input id="location" type="text" placeholder="Location" value="Amsterdam" />
             <input type="hidden" id="lat" />
             <input type="hidden" id="lng" />
             <button type="submit" id="liveData">buienradar Livedata</button>
@@ -82,12 +82,6 @@
             chart.update();
         }
 
-        function updateCharts(time3H, values3H, time24H, values24H) {
-            console.log("Updating chart...");
-            updateChart(chart3H, time3H, values3H);
-            updateChart(chart24H, time24H, values24H);
-        }
-
         function liveDataLocation() {
             $('#error-output').text("");
             if ($('#location').val() == "") {
@@ -135,7 +129,21 @@
         webSocket.listen(function (data) {
             console.log(" Received " + JSON.stringify(data, null, 2));
             // Update
-            updateCharts(data.time3H, data.values3H, data.time24H, data.values24H)
+            var timestamps3 = [];
+            var values3 = [];
+            $.each(data.hours3, function (key, entry) {
+                timestamps3.push(entry.time);
+                values3.push(entry.value);
+            });
+            updateChart(chart3H, timestamps3, values3);
+
+            var timestamps24 = [];
+            var values24 = [];
+            $.each(data.hours24, function (key, entry) {
+                timestamps24.push(entry.time);
+                values24.push(entry.value);
+            });
+            updateChart(chart24H, timestamps24, values24);
         });
         function requestWSUpdate() {
             var data = {
@@ -143,7 +151,7 @@
                 lat: $("#lat").val(),
                 lng: $("#lng").val(),
             };
-            webSocket.send(JSON.stringify(data)).done(function () {
+            webSocket.send(data).done(function () {
                 console.log(" Update requested");
             }).fail(function (e) {
                 console.log(" Could not send message, " + e);

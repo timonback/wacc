@@ -5,8 +5,9 @@ import javax.inject._
 import play.api._
 import play.api.mvc._
 import service.UserService
-import scala.concurrent.ExecutionContext.Implicits.global
+import services.SolertService
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Promise
 
 
