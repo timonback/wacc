@@ -31,6 +31,7 @@ Vagrant.configure(2) do |config|
       v.memory = 1500
     end
 
+  # setup swarm mode
     leader.vm.provision "shell", args: [$leader_ip], inline: <<-SHELL
       docker swarm init --advertise-addr $1
       mkdir -p /vagrant/docker-join-tokens
@@ -39,16 +40,24 @@ Vagrant.configure(2) do |config|
       docker network create --driver overlay services
     SHELL
 
+  # webserver
 	leader.vm.provision "shell", inline: <<-SHELL
       docker service create --name webserver -p 9000:9000 --mode global --network services timonback/wacc:webserver
     SHELL
 	
+	# cassandra
 	leader.vm.provision "shell", inline: <<-SHELL
 	  docker service create --name cassandra --network services --endpoint-mode dnsrr --mode global -e 'CASSANDRA_SEEDS=tasks.cassandra' -e 'CASSANDRA_BROADCAST_ADDRESS=auto' -e 'CASSANDRA_LISTEN_ADDRESS_COMMAND=hostname -i' -e 'CASSANDRA_BROADCAST_ADDRESS_COMMAND=hostname -i' --mount type=bind,target=/var/lib/cassandra,source=/vol/cassandra -e MAX_HEAP_SIZE=150M -e HEAP_NEWSIZE=100M cassandra
 	SHELL
 
 	leader.vm.provision "shell", args: [$leader_ip], inline: <<-SHELL
       docker service create -p 27017:27017 --name mongo --mode global mongo
+    SHELL
+	
+	  # crawler
+    # supported environment variables and defaults: UPDATE_TIME=30000, KEYSPACE=solert, KEYSPACE_REPLICATION="{'class':'SimpleStrategy', 'replication_factor':1}", URL_24H="http://api.buienradar.nl/data/graphdata/1.0/sunforecast/24hours", URL_3H="http://graphdata.buienradar.nl/forecast/jsonsun/"
+	leader.vm.provision "shell", inline: <<-SHELL
+	  docker service create --name crawler --network services timonback/wacc:crawler cassandra
     SHELL
   end
   
