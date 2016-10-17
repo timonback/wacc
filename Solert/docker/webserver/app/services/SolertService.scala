@@ -10,7 +10,10 @@ import scala.util.Random
 
 
 private object Defaults {
-  val connector = ContactPoint.apply("localhost", 9042).keySpace("solert")
+  def dbAddress = sys.env.get("CASSANDRA_ADDRESS").getOrElse("localhost")
+  def dbPort = sys.env.get("CASSANDRA_PORT").getOrElse("9042").toInt
+  def dbKeySpace = sys.env.get("CASSANDRA_KEYSPACE").getOrElse("solert")
+  val connector = ContactPoint.apply(dbAddress, dbPort).keySpace(dbKeySpace)
 }
 
 class SolertService(val keyspace: KeySpaceDef) extends Database(keyspace) {
