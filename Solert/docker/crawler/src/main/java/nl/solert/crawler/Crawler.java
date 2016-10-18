@@ -42,6 +42,7 @@ public class Crawler
 {
 
     public static String URL_24H, URL_3H;
+    private final LocationService locationService = new LocationService();
 
     /**
      * @param args
@@ -108,8 +109,14 @@ public class Crawler
         forecastManager = managerFactory.forForecast();
         locationManager = managerFactory.forLocation();
 
-        locationManager.crud().insert(new Location("Amsterdam", 52.3702157, 4.8951679)).execute();
-        locationManager.crud().insert(new Location("Groningen", 53.2193835, 6.56650179)).execute();
+        for (String locationName : LocationService.getDefaultLocations())
+        {
+            Location location = locationService.getLocation(locationName);
+            if (location.getLat() != 0 && location.getLon() != 0)
+            {
+                locationManager.crud().insert(location).execute();
+            }
+        }
 
         Logger.getLogger(Crawler.class.getName()).log(Level.INFO, "Connection established");
     }
