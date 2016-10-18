@@ -4,9 +4,11 @@ import javax.inject.Inject
 
 import models.User
 import models.User._
+import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.Request
 import play.modules.reactivemongo.{MongoController, ReactiveMongoApi, ReactiveMongoComponents}
+import reactivemongo.api.MongoDriver
 import reactivemongo.play.json._
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -18,7 +20,7 @@ class UserService @Inject()(val reactiveMongoApi: ReactiveMongoApi,
   extends MongoController with ReactiveMongoComponents {
 
   // get the collection 'users'
-  private def collection = reactiveMongoApi.database.
+  private def collection = MongoDB.database.
     map(_.collection[reactivemongo.play.json.collection.JSONCollection]("users"))
 
 
