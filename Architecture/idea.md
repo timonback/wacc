@@ -14,5 +14,5 @@
   - database (weather data & user location)
 
 # Resources
- - http://graphdata.buienradar.nl/forcast/jsonsun/?lat=/lon=
+ - http://graphdata.buienradar.nl/forecast/jsonsun/?lat=/lon=
  - http://maps.googleapis.com/maps/api/geocode/json?address=

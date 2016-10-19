@@ -2,17 +2,22 @@
 # This file defines all application routes (Higher priority routes first)
 # ~~~~
 
-# An example controller showing a sample home page
-GET     /                           controllers.HomeController.index
-# An example controller showing how to use dependency injection
-GET     /count                      controllers.CountController.count
-# An example controller showing how to write asynchronous code
-GET     /message                    controllers.AsyncController.message
+GET     /                           controllers.Home.index
+GET     /report                     controllers.Report.index
+GET     /report/:location           controllers.Report.info(location)
+
+GET     /login                      controllers.Users.showLoginForm
+POST    /login                      controllers.Users.login
+GET     /logout                     controllers.Users.logout
+GET     /user                       controllers.Users.index
+GET     /user/new                   controllers.Users.showCreationForm
+POST    /user/new                   controllers.Users.create
+GET     /user/:id                   controllers.Users.showEditForm(id)
+POST    /user/:id                   controllers.Users.edit(id)
+DELETE  /user/:id                   controllers.Users.delete(id)
 
 # WebSocket endpoints
-GET /ws/echoIndex controllers.WebSocket.echoIndex
-GET /ws/echo controllers.WebSocket.echo
-GET /ws/weather controllers.WebSocket.weather
+GET     /ws/weather                 controllers.WebSocket.weather
 
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)
