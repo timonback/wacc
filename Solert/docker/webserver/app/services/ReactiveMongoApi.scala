@@ -10,6 +10,7 @@ object MongoDB {
   def dbKeySpace = sys.env.get("MONGO_KEYSPACE").getOrElse("solert")
 
   val mongoUri = "mongodb://" + dbAddress + ":" + dbPort + "/" + dbKeySpace;
+  println("Connecting to Mongo "+mongoUri)
 
   val driver = new MongoDriver
 
