@@ -4,6 +4,6 @@
  *@
 @(message: String, currentLocation: String, locations: List[String])(implicit session: play.api.mvc.Session)
 
-@layout(message+" "+currentLocation, "index"){
+@layout(message, "index"){
  @solertgraph(currentLocation, locations)
 }
