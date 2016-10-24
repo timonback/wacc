@@ -1,7 +1,7 @@
 name := "wacc"
 dockerRepository := Some("timonback")
 
-version := "webserver-cassandra"
+version := "webserver-mongo"
 
 lazy val root = (project in file(".")).enablePlugins(PlayScala)
 
