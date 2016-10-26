@@ -24,14 +24,12 @@ Vagrant.configure(2) do |config|
     leader.vm.hostname = leader_name
     leader.vm.network "private_network", ip: $leader_ip
     leader.vm.network "forwarded_port", guest: 9000, host: 9001 #wacc
-    leader.vm.network "forwarded_port", guest: 9042 ,host: 9042 #cassandra
-    leader.vm.network "forwarded_port", guest: 27017,host: 27017#mongo
 
     leader.vm.provider "virtualbox" do |v|
       v.memory = 1500
     end
 
-  # setup swarm mode
+    # setup swarm mode
     leader.vm.provision "shell", args: [$leader_ip], inline: <<-SHELL
       docker swarm init --advertise-addr $1
       mkdir -p /vagrant/docker-join-tokens
@@ -40,17 +38,12 @@ Vagrant.configure(2) do |config|
       docker network create --driver overlay services
     SHELL
 
-  # webserver
-	leader.vm.provision "shell", inline: <<-SHELL
-       docker service create --name webserver -p 9000:9000 --mode global -e CASSANDRA_ADDRESS=cassandra -e MONGO_ADDRESS=mongo --network services timonback/wacc:webserver-mongo
+    # cassandra
+    leader.vm.provision "shell", inline: <<-SHELL
+      docker service create --name cassandra --network services --endpoint-mode dnsrr --mode global -e 'CASSANDRA_SEEDS=auto' -e "SEEDS_COMMAND=nslookup tasks.cassandra | awk '/^Address: / {print \$2}' | paste -d, -s -" -e 'CASSANDRA_BROADCAST_ADDRESS=auto' -e 'CASSANDRA_LISTEN_ADDRESS_COMMAND=hostname -i' -e 'CASSANDRA_BROADCAST_ADDRESS_COMMAND=hostname -i' --mount type=bind,target=/var/lib/cassandra,source=/vol/cassandra -e MAX_HEAP_SIZE=150M -e HEAP_NEWSIZE=100M webscam/cassandra:3.7
     SHELL
-	
-	# cassandra
-	leader.vm.provision "shell", inline: <<-SHELL
-	  docker service create --name cassandra --network services --endpoint-mode dnsrr --mode global -e 'CASSANDRA_SEEDS=auto' -e "SEEDS_COMMAND=nslookup tasks.cassandra | awk '/^Address: / {print \$2}' | paste -d, -s -" -e 'CASSANDRA_BROADCAST_ADDRESS=auto' -e 'CASSANDRA_LISTEN_ADDRESS_COMMAND=hostname -i' -e 'CASSANDRA_BROADCAST_ADDRESS_COMMAND=hostname -i' --mount type=bind,target=/var/lib/cassandra,source=/vol/cassandra -e MAX_HEAP_SIZE=150M -e HEAP_NEWSIZE=100M webscam/cassandra:3.7
-	SHELL
 
-	leader.vm.provision "shell", args: [$leader_ip], inline: <<-SHELL
+    leader.vm.provision "shell", args: [$leader_ip], inline: <<-SHELL
       docker service create --mode global --network services --mount type=bind,source=/vol/mongo/data,target=/data/db --mount type=bind,source=/vol/mongo/config,target=/data/configdb --name mongo mongo mongod --replSet mongoReplica
     SHELL
     ##on first mongo node
@@ -61,14 +54,19 @@ Vagrant.configure(2) do |config|
     #rs.add("*ip-of-new-node*")
     ##to get ip of a docker container
     #docker exec -it *container-name* hostname -i
-	
-	  # crawler
+
+    # crawler
     # supported environment variables and defaults: UPDATE_TIME=30000, KEYSPACE=solert, KEYSPACE_REPLICATION="{'class':'SimpleStrategy', 'replication_factor':1}", URL_24H="http://api.buienradar.nl/data/graphdata/1.0/sunforecast/24hours", URL_3H="http://graphdata.buienradar.nl/forecast/jsonsun/"
-	leader.vm.provision "shell", inline: <<-SHELL
-	  docker service create --name crawler --network services timonback/wacc:crawler cassandra
+    leader.vm.provision "shell", inline: <<-SHELL
+      docker service create --name crawler --network services timonback/wacc:crawler cassandra
+    SHELL
+
+    # webserver
+    leader.vm.provision "shell", inline: <<-SHELL
+       docker service create --name webserver -p 9000:9000 --mode global -e CASSANDRA_ADDRESS=cassandra -e MONGO_ADDRESS=mongo --network services timonback/wacc:webserver-mongo
     SHELL
   end
-  
+
   (2..$num_managers).each do |i|
     config.vm.define manager_name = "manager-%02d" % [i] do |config|
         # just split out the ip
@@ -77,13 +75,14 @@ Vagrant.configure(2) do |config|
 
         config.vm.hostname = manager_name
         config.vm.network :private_network, ip: $manager_start_ip
+        config.vm.network "forwarded_port", guest: 9000, host: (9010+i)
 
         config.vm.provision "shell", args: [$leader_ip], inline: <<-SHELL
           docker swarm join --token $(cat /vagrant/docker-join-tokens/manager) $1
         SHELL
     end
   end
-  
+
   (1..$num_workers).each do |i|
     config.vm.define worker_name = "worker-%02d" % [i] do |config|
         # just split out the ip
@@ -91,8 +90,8 @@ Vagrant.configure(2) do |config|
         $worker_start_ip = ip.succ.to_s
 
         config.vm.hostname = worker_name
-        config.vm.network :private_network, ip: $worker_start_ip 
-		config.vm.network "forwarded_port", guest: 9000, host: (9010+i)
+        config.vm.network :private_network, ip: $worker_start_ip
+        config.vm.network "forwarded_port", guest: 9000, host: (9100+i)
 
         config.vm.provision "shell", args: [$leader_ip], inline: <<-SHELL
           docker swarm join --token $(cat /vagrant/docker-join-tokens/worker) $1
@@ -110,16 +109,8 @@ Vagrant.configure(2) do |config|
         
   config.vm.provision "docker" do |d|
   end
-  
+
   config.vm.provider "virtualbox" do |v|
     v.memory = 1500
   end
-  
-
-  # install weave
-  #config.vm.provision "shell", inline: <<-SHELL
-  #  sudo curl -L git.io/weave -o /usr/local/bin/weave
-  #  sudo chmod +x /usr/local/bin/weave
-  #  weave launch
-  #SHELL
 end
