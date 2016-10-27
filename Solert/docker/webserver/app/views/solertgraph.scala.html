@@ -1,14 +1,21 @@
 @(currentLocation: String, locations: List[String])
 
 <div class="row">
-    <div class="col-md-9">
-        <form onsubmit="return false;">
-            <input id="location" type="text" placeholder="Location" value="@currentLocation" />
-            <input type="hidden" id="lat" />
-            <input type="hidden" id="lng" />
-            <button type="submit" id="liveData">buienradar Livedata</button>
+    <div class="col-md-12">
+        <form onsubmit="return false;" class="form-horizontal">
+            <div class="form-group">
+                <label class="col-sm-2 control-label">Location</label>
+                <div class="col-sm-10">
+                    <input type="text" id="location" class="form-control" placeholder="Location" value="@currentLocation" />
+                    <p id="formInfo" class="bg-warning"></p>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-10 col-sm-offset-2">
+                    <button type="submit" id="submitButton" class="btn btn-default">Update</button>
+                </div>
+            </div>
         </form>
-        <p id="error-output" />
     </div>
     @if(!locations.isEmpty) {
         <div class="col-md-3">
@@ -24,7 +31,7 @@
 
 <div class="row">
     <div class="col-md-6">
-        <h2>3 hour forecast</h2>
+        <h2>Detailed forecast</h2>
         <canvas id="chart3H" style="min-height: 250px;"></canvas>
     </div>
     <div class="col-md-6">
@@ -37,157 +44,232 @@
 <script src="@routes.Assets.versioned("javascripts/chart.bundle.min.js")" type="text/javascript"></script>
 <script src="@routes.Assets.versioned("javascripts/jquery.simple.websocket.js")" type="text/javascript"></script>
 <script type="text/javascript">
-    $(document).ready(function () {
-        function loadLocationInformation(callback) {
-            $.getJSON("http://maps.googleapis.com/maps/api/geocode/json?address=" + $("#location").val(), function (data) {
-                if (data.results.length == 0) {
-                    $('#error-output').text("Location not found");
-                } else {
-                    $("#lat").val(data.results[0].geometry.location.lat);
-                    $("#lng").val(data.results[0].geometry.location.lng);
+        $(document).ready(function () {
+            var formLocationField = $("#location");
 
-                    callback();
-                }
-            });
-        }
 
-        var chartSunlightOptions = {
-            type: 'bar',
-            data: {
-                labels: [moment().toDate()],
-                datasets: [{
-                    label: 'Sun intensity',
-                    data: [0],
-                    backgroundColor: "rgba(250, 200, 0, 0.8)",
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                scales: {
-                    xAxes: [{
-                        type: 'time',
-                        time: {
-                            displayFormats: {
-                                minute: 'HH:mm',
-                                hour: "HH" // "dd HH"?
+            var gmapsService = (function () {
+                var public = {};
+
+                public.loadLocation = function(locationInfo, callback) {
+                    $.getJSON("http://maps.googleapis.com/maps/api/geocode/json?address=" + locationInfo, function (data) {
+                        if(callback!=null) {
+                            var result = {lat: 0, lng: 0};
+                            if (data.results.length != 0) {
+                                var lat = data.results[0].geometry.location.lat;
+                                var lng = data.results[0].geometry.location.lng;
+                                result = {lat: lat.toFixed(3),
+                                    lng: lng.toFixed(3)};
                             }
+                            callback(result);
                         }
-                    }],
-                    yAxes: [{
-                        ticks: {
-                            beginAtZero: true,
-                            max: 100
+                    });
+                };
+
+                return public;
+            })();
+
+            var SPALocationService  = (function ($) {
+                var public = {};
+
+                //Register location info buttons
+                public.registerElements = function (spaElements, callback) {
+                    spaElements.click(function () {
+                        var location = $(this).data("location");
+                        formLocationField.val(location);
+
+                        public.saveLocation(location);
+
+                        if(callback != null) {
+                            callback();
                         }
-                    }]
+
+                        return false;
+                    });
+                };
+
+                public.saveLocation = function(location) {
+                    window.location.hash = location;
+                };
+
+                public.loadFromUrl = function () {
+                    var hash = window.location.hash.substring(1);
+                    if(hash !== "") {
+                        formLocationField.val(hash);
+                    }
+                };
+                public.loadFromUrl();
+
+                return public;
+            }(jQuery));
+            SPALocationService.registerElements($(".anchorLink"), function () {solertService.requestUpdate()});
+
+            var chartService = (function () {
+                var public = {};
+
+                var chartSunlightOptions = {
+                    type: 'bar',
+                    data: {
+                        labels: [moment().toDate()],
+                        datasets: [{
+                            label: 'Sun intensity',
+                            data: [0],
+                            backgroundColor: "rgba(250, 200, 0, 0.8)",
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            xAxes: [{
+                                type: 'time',
+                                time: {
+                                    displayFormats: {
+                                        minute: 'HH:mm',
+                                        hour: "HH" // "dd HH"?
+                                    }
+                                }
+                            }],
+                            yAxes: [{
+                                ticks: {
+                                    beginAtZero: true,
+                                    max: 100
+                                }
+                            }]
+                        }
+                    }
+                };
+
+                chart3HElement = document.getElementById("chart3H");
+                chart24HElement = document.getElementById("chart24H");
+                public.chart3H = new Chart(chart3HElement, JSON.parse(JSON.stringify(chartSunlightOptions)));
+                public.chart24H = new Chart(chart24HElement, JSON.parse(JSON.stringify(chartSunlightOptions)));
+
+                public.update = function (chart, timestampsString, values) {
+                    var timestamps = timestampsString.map(function (obj) {
+                        return moment(obj).toDate();
+                    });
+                    chart.data.labels = timestamps;
+                    chart.data.datasets[0].data = values;
+                    chart.update();
+                };
+
+                return public;
+            }());
+
+            var buienradarService = (function (chartService, $) {
+                var public = {};
+
+                function get3HourUrl(lat, lon) {
+                    return "http://graphdata.buienradar.nl/forecast/jsonsun/?lat=" + lat + "&lon=" + lon + "&time="+(new Date()).getTime();
                 }
-            }
-        };
-        var chart3H = new Chart(document.getElementById("chart3H"), JSON.parse(JSON.stringify(chartSunlightOptions)));
-        var chart24H = new Chart(document.getElementById("chart24H"), JSON.parse(JSON.stringify(chartSunlightOptions)));
-
-        function updateChart(chart, timestampsString, values) {
-            var timestamps = timestampsString.map(function (obj) {
-                return moment(obj).toDate();
-            });
-            chart.data.labels = timestamps;
-            chart.data.datasets[0].data = values;
-            chart.update();
-        }
-
-        function liveData(lat, lon) {
-            $.getJSON("http://graphdata.buienradar.nl/forecast/jsonsun/?lat=" + lat + "&lon=" + lon, function (data) {
-                var timestamps = [];
-                var values = [];
-                $.each(data.forecasts, function (key, entry) {
-                    timestamps.push(entry.datetime);
-                    values.push(entry.value);
-                });
-                updateChart(chart3H, timestamps, values);
-                if (timestamps.length == 0) {
-                    $('#error-output').text("No sun forecast for the next 3 hours, might it be night?");
+                function get24HourUrl(lat, lon) {
+                    return "http://api.buienradar.nl/data/graphdata/1.0/sunforecast/24hours?lat=" + lat + "&lon=" + lon + "&time="+(new Date()).getTime();
                 }
-            });
-            $.getJSON("http://api.buienradar.nl/data/graphdata/1.0/sunforecast/24hours?lat=" + lat + "&lon=" + lon, function (data) {
-                var timestamps = [];
-                var values = [];
-                $.each(data.forecasts, function (key, entry) {
-                    timestamps.push(entry.datetime);
-                    values.push(entry.value);
+
+                function updateChart(url, chart) {
+                    return $.getJSON(url, function (data) {
+                        var timestamps = [];
+                        var values = [];
+                        $.each(data.forecasts, function (key, entry) {
+                            timestamps.push(entry.datetime);
+                            values.push(entry.value);
+                        });
+                        chartService.update(chart, timestamps, values);
+                    });
+                }
+
+                public.update = function(lat, lon) {
+                    updateChart(get3HourUrl(lat, lon), chartService.chart3H);
+                    updateChart(get24HourUrl(lat, lon), chartService.chart24H);
+                };
+
+                return public;
+            }(chartService, jQuery));
+
+            var solertService = (function (chartService, SPALocationService, $) {
+                var public = {};
+
+                var updateFailedCallback;
+                public.setUpdateFailedCallback = function(callback) {
+                    updateFailedCallback = callback;
+                };
+
+                var webSocket = $.simpleWebSocket({url: " ws://" + window.location.host + "/ws/weather"});
+
+                // reconnected listening
+                webSocket.listen(function (data) {
+                    console.log(" Received " + JSON.stringify(data, null, 2));
+
+                    // Update
+                    if(0<data.hours3.length && 0<data.hours24.length) {
+                        //We got data
+                        updateChart(chartService.chart3H, data.hours3);
+                        updateChart(chartService.chart24H, data.hours24);
+                    } else {
+                        if(updateFailedCallback != null) {
+                            updateFailedCallback();
+                        }
+                    }
                 });
-                updateChart(chart24H, timestamps, values);
+
+                function updateChart(chart, chartData) {
+                    var timestamps3 = [];
+                    var values3 = [];
+                    $.each(chartData, function (key, entry) {
+                        timestamps3.push(entry.time);
+                        values3.push(entry.value);
+                    });
+                    chartService.update(chart, timestamps3, values3);
+                }
+
+                function sendData() {
+                    var location = formLocationField.val();
+
+                    SPALocationService.saveLocation(formLocationField.val());
+                    $("#formInfo").text("");
+
+                    var data = {
+                        location: location
+                    };
+                    webSocket.send(data).done(function () {
+                        console.log(" Update requested");
+                    }).fail(function (e) {
+                        console.log(" Could not send message, " + e);
+                    });
+                }
+
+                var reloadTimeout;
+                public.requestUpdate = function () {
+                    window.clearTimeout(reloadTimeout);
+
+                    sendData();
+
+                    reloadTimeout = window.setTimeout(public.requestUpdate, 10000);
+                };
+
+                return public;
+            }(chartService, SPALocationService, jQuery));
+
+
+            //Register submit button
+            $("#submitButton").click(function () {
+                console.log("Submit button was pressed");
+
+                solertService.requestUpdate();
             });
-        }
+            solertService.setUpdateFailedCallback(function () {
+                var currentLocation = formLocationField.val();
+                console.log("Fallback to buienradar for "+currentLocation);
 
-        function liveDataLocation() {
-            $('#error-output').text("");
-
-            loadLocationInformation(function () {
-                liveData(data.results[0].geometry.location.lat, data.results[0].geometry.location.lng);
+                $("#formInfo").text("No cached data, requesting buienradar directly");
+                gmapsService.loadLocation(currentLocation, function(location) {
+                    console.log("Location: "+JSON.stringify(location));
+                    buienradarService.update(location.lat, location.lng);
+                });
             });
-        }
 
-        //Register buienradar button
-        $("#liveData").click(liveDataLocation);
-
-        //Register location info buttons
-        $(".anchorLink").click(function () {
-            var location = $(this).data("location");
-            $("#location").val(location);
-            window.location.hash = location;
-            loadLocationInformation();
-
-            window.clearTimeout(reloadTimeout);
-            requestWSUpdate();
-
-            return false;
-        });
-
-        //Load location info from url
-        function readCachedLocationInfo() {
-            var hash = window.location.hash.substring(1);
-            if(hash !== "") {
-                $("#location").val(hash);
-                loadLocationInformation();
-            }
-        }
-        readCachedLocationInfo();
-
-        var webSocket = $.simpleWebSocket({url: " ws://" + window.location.host + "/ws/weather"});
-        // reconnected listening
-        webSocket.listen(function (data) {
-            console.log(" Received " + JSON.stringify(data, null, 2));
-            // Update
-            var timestamps3 = [];
-            var values3 = [];
-            $.each(data.hours3, function (key, entry) {
-                timestamps3.push(entry.time);
-                values3.push(entry.value);
-            });
-            updateChart(chart3H, timestamps3, values3);
-
-            var timestamps24 = [];
-            var values24 = [];
-            $.each(data.hours24, function (key, entry) {
-                timestamps24.push(entry.time);
-                values24.push(entry.value);
-            });
-            updateChart(chart24H, timestamps24, values24);
-        });
-
-        var reloadTimeout;
-        //Init websocket
-        function requestWSUpdate() {
-            var data = {
-                location: $("#location").val()
-            };
-            webSocket.send(data).done(function () {
-                console.log(" Update requested");
-            }).fail(function (e) {
-                console.log(" Could not send message, " + e);
-            });
-            reloadTimeout = window.setTimeout(requestWSUpdate, 10000);
-        }
-        requestWSUpdate();
-    })
+            //Run first update instantly
+            solertService.requestUpdate();
+        })
 </script>
