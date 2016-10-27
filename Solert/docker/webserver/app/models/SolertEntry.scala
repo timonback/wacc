@@ -29,6 +29,8 @@ class SolertEntries extends CassandraTable[ConcreteSolertEntry, SolertEntry] {
 
 abstract class ConcreteSolertEntry extends SolertEntries with RootConnector {
 
+  def clear: Future[ResultSet] = create.ifNotExists().future()
+
   def getById(location: String): Future[Option[SolertEntry]] = {
     select.where(_.location eqs location).one()
   }
@@ -36,7 +38,7 @@ abstract class ConcreteSolertEntry extends SolertEntries with RootConnector {
   def getFutureEntries(location: String, minutes: Int): Future[Seq[SolertEntry]] = {
     val start = new DateTime().minusMinutes(10)
     val end = new DateTime().plusMinutes(minutes)
-    //.and(_.time gte start).and(_.time lte end)
+
     select.where(_.location eqs location).and(_.datetime gte start).and(_.datetime lte end).fetch()
   }
 

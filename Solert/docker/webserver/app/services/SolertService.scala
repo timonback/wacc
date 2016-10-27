@@ -1,5 +1,7 @@
 package services
 
+import java.util.concurrent.TimeUnit
+
 import com.websudos.phantom.dsl._
 import models.{ConcreteSolertEntry, SolertEntry}
 import play.api.Logger
@@ -23,6 +25,7 @@ private object Defaults {
 class SolertService(val keyspace: KeySpaceDef) extends Database(keyspace) {
 
   object forecast extends ConcreteSolertEntry with keyspace.Connector
+  Await.ready(forecast.clear, Duration.create(3, TimeUnit.SECONDS))
 
   def getById(location: String): Future[Option[SolertEntry]] = forecast.getById(location)
 
@@ -30,7 +33,7 @@ class SolertService(val keyspace: KeySpaceDef) extends Database(keyspace) {
 
   def getEntriesNext24Hours(location: String): Future[Seq[SolertEntry]] = forecast.getFutureEntries(location, 1440)
 
-  def generateData(location: String) = {
+  /*def generateData(location: String) = {
     Await.ready(forecast.create.ifNotExists().future(), Duration.Inf)
 
     if (Await.result(getEntriesNext3Hours(location), Duration.Inf).isEmpty) {
@@ -45,7 +48,7 @@ class SolertService(val keyspace: KeySpaceDef) extends Database(keyspace) {
         )
       }
     }
-  }
+  }*/
 }
 
 object SolertServiceImpl extends SolertService(Defaults.connector)

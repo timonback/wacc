@@ -25,10 +25,8 @@ class WebSocket @Inject()(implicit system: ActorSystem, materializer: Materializ
     Flow.fromFunction { in: JsValue =>
       Logger.info(in.toString)
       val location = (in \ "location").as[String]
-      val lat = (in \ "lat").as[String]
-      val lng = (in \ "lng").as[String]
 
-      SolertServiceImpl.generateData(location)
+      //SolertServiceImpl.generateData(location)
 
       def hours3 = for {
         dataSeq <- SolertServiceImpl.getEntriesNext3Hours(location)

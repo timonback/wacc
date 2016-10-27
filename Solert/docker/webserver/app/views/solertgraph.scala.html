@@ -179,9 +179,7 @@
         //Init websocket
         function requestWSUpdate() {
             var data = {
-                location: $("#location").val(),
-                lat: $("#lat").val(),
-                lng: $("#lng").val(),
+                location: $("#location").val()
             };
             webSocket.send(data).done(function () {
                 console.log(" Update requested");
