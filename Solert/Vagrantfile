@@ -14,7 +14,7 @@ Vagrant.configure(2) do |config|
   require 'ipaddr'
   
   $leader_ip = "192.168.10.10"
-  $num_managers = 1
+  $num_managers = 3
   $manager_start_ip = "192.168.10.11"
   $num_workers = 2
   $worker_start_ip = "192.168.10.100"
@@ -50,7 +50,7 @@ Vagrant.configure(2) do |config|
     #docker exec -it mongo.*container-name* mongo
     #rs.initiate({ _id: "mongoReplica", members: [{ _id: 0, host: "mongo:27017" }], settings: { getLastErrorDefaults: { w: "majority" }}})
     ##on further nodes
-    #docker exec -it *mongo-container-name* mongo *ip-of-prime*
+    #docker exec -it *mongo-container-name* mongo --host *ip-of-prime*
     #rs.add("*ip-of-new-node*")
     ##to get ip of a docker container
     #docker exec -it *container-name* hostname -i
