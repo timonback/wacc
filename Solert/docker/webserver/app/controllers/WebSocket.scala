@@ -2,6 +2,7 @@ package controllers
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import java.text.SimpleDateFormat
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 import akka.actor.ActorSystem
@@ -24,11 +25,9 @@ class WebSocket @Inject()(implicit system: ActorSystem, materializer: Materializ
   def weather = WebSocket.accept[JsValue, JsValue] { request =>
     Flow.fromFunction { in: JsValue =>
       Logger.info(in.toString)
-      val location = (in \ "location").as[String]
-      val lat = (in \ "lat").as[String]
-      val lng = (in \ "lng").as[String]
+      val location = (in \ "location").asOpt[String].getOrElse("")
 
-      SolertServiceImpl.generateData(location)
+      //SolertServiceImpl.generateData(location)
 
       def hours3 = for {
         dataSeq <- SolertServiceImpl.getEntriesNext3Hours(location)
@@ -52,8 +51,8 @@ class WebSocket @Inject()(implicit system: ActorSystem, materializer: Materializ
 
       Json.obj(
         "original-request" -> in,
-        "hours3" -> Json.toJson(Await.result(hours3, Duration.fromNanos(1000000000))),
-        "hours24" -> Json.toJson(Await.result(hours24, Duration.fromNanos(1000000000)))
+        "hours3" -> Json.toJson(Await.result(hours3, Duration.create(1, TimeUnit.SECONDS))),
+        "hours24" -> Json.toJson(Await.result(hours24, Duration.create(1, TimeUnit.SECONDS)))
       )
     }
   }

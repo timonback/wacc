@@ -45,14 +45,17 @@
         </nav>
 
         <div id="content" class="container">
-            <h1>@title</h1>
+            <div class="row">
+                <div class="col-md-12">
+                    <h1>@title</h1>
+                </div>
+            </div>
             @content
         </div> <!-- /container -->
 
         <script src="@routes.Assets.versioned("javascripts/jquery.json.min.js")" type="text/javascript"></script>
         <script src="@routes.Assets.versioned("javascripts/jquery.simple.websocket.js")" type="text/javascript"></script>
         <script src="@routes.Assets.versioned("javascripts/bootstrap.js")" type="text/javascript"></script>
-        <script src="@routes.Assets.versioned("javascripts/hello.js")" type="text/javascript"></script>
 
         @scripts
 
