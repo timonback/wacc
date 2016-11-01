@@ -92,10 +92,15 @@
                     window.location.hash = location;
                 };
 
+                function urldecode(str) {
+                    return decodeURIComponent((str+'').replace(/\+/g, '%20'));
+                }
+
                 public.loadFromUrl = function () {
                     var hash = window.location.hash.substring(1);
                     if(hash !== "") {
-                        formLocationField.val(hash);
+                        var location = urldecode(hash)
+                        formLocationField.val(location);
                     }
                 };
                 public.loadFromUrl();
