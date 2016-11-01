@@ -167,7 +167,7 @@ public class Crawler
             Forecast[] result = new Forecast[forecasts.size()];
             for (int i = 0; i < result.length; i++)
             {
-                String datetime = forecasts.get(i).getAsJsonObject().get("datetime").getAsString();
+                String datetime = forecasts.get(i).getAsJsonObject().get("utcdatetime").getAsString();
                 int value = forecasts.get(i).getAsJsonObject().get("value").getAsInt();
                 result[i] = new Forecast(location.getName(), datetime, value);
             }

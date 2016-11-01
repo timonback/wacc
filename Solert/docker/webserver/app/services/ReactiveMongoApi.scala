@@ -1,25 +1,27 @@
 package services
 
+import java.net.InetAddress
+
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
-import reactivemongo.api.{MongoDriver, MongoConnection}
+import reactivemongo.api.{MongoConnection, MongoDriver}
 
 object MongoDB {
   def dbAddress = sys.env.get("MONGO_ADDRESS").getOrElse("localhost")
   def dbPort = sys.env.get("MONGO_PORT").getOrElse("27017").toInt
   def dbKeySpace = sys.env.get("MONGO_KEYSPACE").getOrElse("solert")
 
-  val mongoUri = "mongodb://" + dbAddress + ":" + dbPort + "/" + dbKeySpace;
-  println("Connecting to Mongo "+mongoUri)
-
   val driver = new MongoDriver
 
-  val database = for {
-    uri <- Future.fromTry(MongoConnection.parseURI(mongoUri))
-    con = driver.connection(uri)
-    dn <- Future(uri.db.get)
-    db <- con.database(dn)
-  } yield db
+  val ips: Array[InetAddress] = InetAddress.getAllByName(dbAddress)
+
+  val uris: Seq[String] = ips.map(ip => buildMongoUri(ip.getHostAddress, dbPort))
+  println("Connecting to Mongo "+uris.mkString(","))
+
+  val database = {
+    val con = driver.connection(uris)
+    con.database(dbKeySpace)
+  }
 
   database.onComplete {
     case resolution =>
@@ -28,5 +30,9 @@ object MongoDB {
 
   def shutDown = {
     driver.close()
+  }
+
+  def buildMongoUri(dbAddress: String, dbPort : Int): String = {
+    dbAddress + ":" + dbPort
   }
 }

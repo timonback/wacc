@@ -44,11 +44,11 @@ Vagrant.configure(2) do |config|
     SHELL
 
     leader.vm.provision "shell", args: [$leader_ip], inline: <<-SHELL
-      docker service create --mode global --network services --mount type=bind,source=/vol/mongo/data,target=/data/db --mount type=bind,source=/vol/mongo/config,target=/data/configdb --name mongo mongo mongod --replSet mongoReplica
+      docker service create --mode global --network services --endpoint-mode dnsrr --mount type=bind,source=/vol/mongo/data,target=/data/db --mount type=bind,source=/vol/mongo/config,target=/data/configdb --name mongo mongo mongod --replSet mongoReplica
     SHELL
     ##on first mongo node
     #docker exec -it mongo.*container-name* mongo
-    #rs.initiate({ _id: "mongoReplica", members: [{ _id: 0, host: "mongo:27017" }], settings: { getLastErrorDefaults: { w: "majority" }}})
+    #rs.initiate({ _id: "mongoReplica", members: [{ _id: 0, host: "*ip-of-container*:27017" }], settings: { getLastErrorDefaults: { w: "majority" }}})
     ##on further nodes
     #docker exec -it *mongo-container-name* mongo --host *ip-of-prime*
     #rs.add("*ip-of-new-node*")
@@ -58,7 +58,7 @@ Vagrant.configure(2) do |config|
     # crawler
     # supported environment variables and defaults: UPDATE_TIME=30000, KEYSPACE=solert, KEYSPACE_REPLICATION="{'class':'SimpleStrategy', 'replication_factor':1}", URL_24H="http://api.buienradar.nl/data/graphdata/1.0/sunforecast/24hours", URL_3H="http://graphdata.buienradar.nl/forecast/jsonsun/"
     leader.vm.provision "shell", inline: <<-SHELL
-      docker service create --name crawler --network services timonback/wacc:crawler cassandra
+      docker service create --name crawler --network services -e KEYSPACE_REPLICATION="{'class':'SimpleStrategy', 'replication_factor':2}" timonback/wacc:crawler cassandra
     SHELL
 
     # webserver
@@ -104,7 +104,7 @@ Vagrant.configure(2) do |config|
     sudo chown ubuntu /vol
     sudo chgrp ubuntu /vol
     mkdir -p /vol/cassandra
-    mkdir /vol/mongo /vol/mongo/data /vol/mongo/config
+    mkdir -p /vol/mongo /vol/mongo/data /vol/mongo/config
   SHELL
         
   config.vm.provision "docker" do |d|
