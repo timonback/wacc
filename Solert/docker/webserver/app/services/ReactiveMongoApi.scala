@@ -1,8 +1,10 @@
 package services
 
+import java.net.InetAddress
+
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
-import reactivemongo.api.{MongoDriver, MongoConnection}
+import reactivemongo.api.{MongoConnection, MongoDriver}
 
 object MongoDB {
   def dbAddress = sys.env.get("MONGO_ADDRESS").getOrElse("localhost")
@@ -14,12 +16,14 @@ object MongoDB {
 
   val driver = new MongoDriver
 
-  val database = for {
-    uri <- Future.fromTry(MongoConnection.parseURI(mongoUri))
-    con = driver.connection(uri)
-    dn <- Future(uri.db.get)
-    db <- con.database(dn)
-  } yield db
+  val ips: Array[InetAddress] = InetAddress.getAllByName(mongoUri)
+
+  val uris: Seq[String] = ips.map(ip => buildMongoUri(ip.getHostAddress, dbPort))
+
+  val database = {
+    val con = driver.connection(uris)
+    con.database(dbKeySpace)
+  }
 
   database.onComplete {
     case resolution =>
@@ -28,5 +32,9 @@ object MongoDB {
 
   def shutDown = {
     driver.close()
+  }
+
+  def buildMongoUri(dbAddress: String, dbPort : Int): String = {
+    "mongodb://"+dbAddress + ":" + dbPort
   }
 }
