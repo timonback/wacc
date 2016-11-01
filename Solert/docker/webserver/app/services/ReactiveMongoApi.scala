@@ -11,14 +11,12 @@ object MongoDB {
   def dbPort = sys.env.get("MONGO_PORT").getOrElse("27017").toInt
   def dbKeySpace = sys.env.get("MONGO_KEYSPACE").getOrElse("solert")
 
-  val mongoUri = "mongodb://" + dbAddress + ":" + dbPort + "/" + dbKeySpace;
-  println("Connecting to Mongo "+mongoUri)
-
   val driver = new MongoDriver
 
-  val ips: Array[InetAddress] = InetAddress.getAllByName(mongoUri)
+  val ips: Array[InetAddress] = InetAddress.getAllByName(dbAddress)
 
   val uris: Seq[String] = ips.map(ip => buildMongoUri(ip.getHostAddress, dbPort))
+  println("Connecting to Mongo "+uris.mkString(","))
 
   val database = {
     val con = driver.connection(uris)
