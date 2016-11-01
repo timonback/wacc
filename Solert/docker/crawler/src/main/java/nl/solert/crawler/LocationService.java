@@ -42,8 +42,8 @@ public class LocationService
             JsonObject firstResult = resultsObj.get(0).getAsJsonObject();
             JsonObject geometryObj = firstResult.get("geometry").getAsJsonObject();
             JsonObject locationObj = geometryObj.get("location").getAsJsonObject();
-            double lat = locationObj.get("lat").getAsDouble();
-            double lng = locationObj.get("lng").getAsDouble();
+            double lat = Math.round(locationObj.get("lat").getAsDouble()*100.0)/100.0;
+            double lng = Math.round(locationObj.get("lng").getAsDouble()*100.0)/100.0;
 
             Location location = new Location(locationName, lat, lng);
             return location;
