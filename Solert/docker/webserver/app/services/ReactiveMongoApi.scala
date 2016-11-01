@@ -33,6 +33,6 @@ object MongoDB {
   }
 
   def buildMongoUri(dbAddress: String, dbPort : Int): String = {
-    "mongodb://"+dbAddress + ":" + dbPort
+    dbAddress + ":" + dbPort
   }
 }
