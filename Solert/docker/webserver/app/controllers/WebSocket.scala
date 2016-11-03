@@ -25,7 +25,7 @@ class WebSocket @Inject()(implicit system: ActorSystem, materializer: Materializ
   def weather = WebSocket.accept[JsValue, JsValue] { request =>
     Flow.fromFunction { in: JsValue =>
       Logger.info(in.toString)
-      val location = (in \ "location").asOpt[String].getOrElse("")
+      val location = (in \ "location").asOpt[String].getOrElse("Groningen")
 
       //SolertServiceImpl.generateData(location)
 
